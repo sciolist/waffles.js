@@ -1,0 +1,17 @@
+{
+  "main": "./lib/index.js",
+  "name": "coffeemill",
+  "description": "coffeescript enabled spreadsheets",
+  "version": "0.1.0",
+  "author": "Daniel Pihlström <sciolist.se@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/threecreepio/coffeemill.git"
+  },
+  "dependencies": {
+    "coffee-script": ">= 1.0.1"
+  },
+  "engine": [
+    "node >=0.1.90"
+  ]
+}
