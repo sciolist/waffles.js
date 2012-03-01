@@ -485,6 +485,7 @@ var TableView = CoffeeMill.util.Class.extend({
         cell.style.width = (sizes.x[this.span.x + x-1] || defaultWidth) + "px";
         wrapper.style.height = cell.style.height;
         wrapper.style.width = cell.style.width;
+        wrapper.style.lineHeight = cell.style.height;
 
         if(x === 0 && y === 0) {
           // TOP LEFT HEADER
