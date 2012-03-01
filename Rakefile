@@ -23,7 +23,7 @@ CODE
   end
 
   FileUtils.mkdir "./out" unless Dir.exist? "./out"
-  File.open "./out/coffeemill.js", "w" do |f|
+  File.open "./out/waffles.js", "w" do |f|
     f.puts <<-CODE
 (function(window, undefined) {
 var requireCode = {};

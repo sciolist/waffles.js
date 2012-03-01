@@ -1,12 +1,12 @@
 {
   "main": "./lib/index.js",
-  "name": "coffeemill",
+  "name": "waffles.js",
   "description": "coffeescript enabled spreadsheets",
   "version": "0.1.0",
   "author": "Daniel Pihlström <sciolist.se@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "http://github.com/threecreepio/coffeemill.git"
+    "url": "http://github.com/sciolist/waffles.js.git"
   },
   "dependencies": {
     "coffee-script": ">= 1.0.1"
