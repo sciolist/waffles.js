@@ -1,17 +1,18 @@
 require "fileutils"
 require "json"
 
+task :default => [:"build:browser"] do
+end
+
 desc "Builds a javascript file for inclusion in web browsers."
-task "build:browser" do
+task :"build:browser" do
   pkg = File.open "package.json" do |f|
     JSON.parse f.read
   end
 
   template = <<-CODE
-requireCode["./%s"] = function() {
-  var exports = {};
+requireCode["./%s"] = function(exports) {
   %s
-  return exports;
 };
 CODE
 
@@ -29,7 +30,9 @@ var requireCode = {};
 function require(path) {
   var data = requireCode[path];
   if(data instanceof Function) {
-    data = requireCode[path] = data();
+    var method = data;
+    data = requireCode[path] = {};
+    method(data);
   }
   return data;
 }
