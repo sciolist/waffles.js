@@ -37,8 +37,8 @@ function require(path) {
   return data;
 }
 #{results.join ""}
-window.CoffeeMill = require('./#{File.basename(pkg["main"], '.js')}')
-window.CoffeeMill.require = require;
+window.Waffles = require('./#{File.basename(pkg["main"], '.js')}')
+window.Waffles.require = require;
 })(window);
 
 CODE

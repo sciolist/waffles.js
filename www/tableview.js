@@ -1,13 +1,13 @@
-var TableView = CoffeeMill.util.Class.extend({
+var TableView = Waffles.util.Class.extend({
   init: function(em, book) {
     var self = this;
     this.book = book;
     this.em = em.css("overflow", "hidden");
     var sheet = book.sheet("Sheet1");
-    this.span = new CoffeeMill.Span(sheet, 0, 0, 10, 10);
-    this.selection = new CoffeeMill.Span(sheet, 0, 0, 1, 1);
-    this.selectionAt = new CoffeeMill.Span(sheet, 0, 0, 1, 1);
-    this.selectionFocus = new CoffeeMill.Span(sheet, 0, 0, 1, 1);
+    this.span = new Waffles.Span(sheet, 0, 0, 10, 10);
+    this.selection = new Waffles.Span(sheet, 0, 0, 1, 1);
+    this.selectionAt = new Waffles.Span(sheet, 0, 0, 1, 1);
+    this.selectionFocus = new Waffles.Span(sheet, 0, 0, 1, 1);
     
     this.selectionFocus.on("moved", function() {
       self.selectionAt.location(this);
@@ -502,7 +502,7 @@ var TableView = CoffeeMill.util.Class.extend({
           // TOP HEADER
           cell.className = "header header-x header-x" + (x-1);
           cell.setAttribute("data-header-x", x-1);
-          wrapper.childNodes[0].nodeValue = CoffeeMill.Scripting.columnName(this.span.x+x);
+          wrapper.childNodes[0].nodeValue = Waffles.Scripting.columnName(this.span.x+x);
           
 
         } else {
