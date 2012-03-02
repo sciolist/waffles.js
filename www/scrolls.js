@@ -26,7 +26,8 @@
 
     _sizes: function() {
         var em = document.createElement("div");
-        em.style.visibility = "hidden";
+        em.style.width = "64px";
+        em.style.height = "64px";
 
         document.body.appendChild(em);
 
@@ -41,7 +42,7 @@
         if(!h) h = em.offsetHeight - em.clientHeight;
 
         document.body.removeChild(em);
-        return { width: Math.abs(h), height: Math.abs(h) };
+        return { width: Math.abs(w), height: Math.abs(h) };
     },
     
     _init: function() {
