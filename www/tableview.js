@@ -324,8 +324,24 @@ var TableView = Waffles.util.Class.extend({
         case 40: // D
           self.moveSelection(e.shiftKey, 0, 1);
           break;
+
+        case 33: // Page up
+          self.moveSelection(e.shiftKey, 0, -self.span.height);
+          break;
+        case 32: // Space
+        case 34: // Page dn
+          self.moveSelection(e.shiftKey, 0, self.span.height * 2);
+          self.moveSelection(e.shiftKey, 0, -self.span.height);
+          break;
+        case 35:
+          self.moveSelection(e.shiftKey, self.span.width * 2, 0);
+          self.moveSelection(e.shiftKey, -self.span.width, 0);
+          break;
+        case 36:
+          self.moveSelection(e.shiftKey, -self.span.width, 0);
+          break;
+
         default:
-          console&&console.log(e.which);
           self.showEditInput();
           break;
       }
