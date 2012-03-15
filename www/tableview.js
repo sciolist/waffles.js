@@ -498,20 +498,20 @@ var TableView = Waffles.util.Class.extend({
 
         var wrapper = cell.childNodes[0];
         cell.style.height = (sizes.y[this.span.y + y-1] || defaultHeight) + "px";
-        cell.style.width = (sizes.x[this.span.x + x-1] || defaultWidth) + "px";
-        wrapper.style.height = cell.style.height;
-        wrapper.style.width = cell.style.width;
-        wrapper.style.lineHeight = cell.style.height;
+        cell.style.width  = (sizes.x[this.span.x + x-1] || defaultWidth) + "px";
 
         if(x === 0 && y === 0) {
           // TOP LEFT HEADER
           cell.className = "header header-xy";
+          cell.style.height = defaultHeight + "px";
+          cell.style.width = defaultWidth + "px";
 
         } else if(x === 0) {
           // LEFT HEADER
           cell.className = "header header-y header-y" + (y-1);
           cell.setAttribute("data-header-y", y-1);
           wrapper.childNodes[0].nodeValue = this.span.y+y;
+          cell.style.width = defaultWidth + "px";
 
 
         } else if(y === 0) {
@@ -519,6 +519,7 @@ var TableView = Waffles.util.Class.extend({
           cell.className = "header header-x header-x" + (x-1);
           cell.setAttribute("data-header-x", x-1);
           wrapper.childNodes[0].nodeValue = Waffles.Scripting.columnName(this.span.x+x);
+          cell.style.height = defaultHeight + "px";
           
 
         } else {
@@ -529,6 +530,10 @@ var TableView = Waffles.util.Class.extend({
           var dataCell = cellMap[(y-1)*this.span.width+(x-1)];
           this.assignValue(cell, dataCell);
         }
+        wrapper.style.height = cell.style.height;
+        wrapper.style.width = cell.style.width;
+        wrapper.style.lineHeight = cell.style.height;
+
       }
     }
     this.updateSelection();
