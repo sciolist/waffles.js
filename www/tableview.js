@@ -276,12 +276,27 @@ var TableView = Waffles.util.Class.extend({
             e.preventDefault();
             break;
       }
+      self.fitEditInput();
     });
     
     input.keydown(function(e) {
       var isVisible = !inputWrapper.hasClass("hidden");
+
       if(isVisible) {
+        // Runs in edit mode.
         switch(e.which) {
+          case 37: // L
+            if(input[0].selectionStart === 0) {
+              self.hideEditInput();
+              self.moveSelection(e.shiftKey, -1, 0);
+            }
+            break;
+          case 39: // R
+            if(input[0].selectionEnd === input[0].value.length) {
+              self.hideEditInput();
+              self.moveSelection(e.shiftKey, 1, 0);
+            }
+            break;          
           case 38: // U
             self.hideEditInput();
             self.moveSelection(e.shiftKey, 0, -1);
@@ -297,6 +312,8 @@ var TableView = Waffles.util.Class.extend({
         }
         return;
       }
+
+      // Runs OUTSIDE edit mode.
       switch(e.which) {
         case 27:
         case 16:
