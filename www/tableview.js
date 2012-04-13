@@ -28,7 +28,9 @@ var TableView = Waffles.util.Class.extend({
       self.refreshValues();
     });
     this.span.on("cell:changed", function(e, span) {
-      self.assignValue(self.cellAt(e.cell.x - span.x, e.cell.y - span.y), e.cell);
+      setTimeout(function() {
+        self.onVisibleCellChanged(self.cellAt(e.cell.x - span.x, e.cell.y - span.y), e.cell);
+      }, 8);
     });
     
     this.createVerticalScroll();
