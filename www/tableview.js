@@ -350,16 +350,22 @@ var TableView = Waffles.util.Class.extend({
   assignValue: function(node, dataCell) {
     if(node.length) { node = node[0]; }
     if(node.nodeName == "TD") { node = node.childNodes[0].childNodes[0]; }
+    var td = node.parentNode.parentNode;
+    td.className = "";
     var value;
     try {
       value = dataCell ? dataCell.valueOf() : "";
       if(value === undefined) { value = ""; }
     } catch(e) {
-      value = e.code || "#ERR";
+      td.className = "error";
+      value = this.getErrorMessage(e);
     }
     if(node.nodeValue !== value) {
       node.nodeValue = value;
     }
+  getErrorMessage: function(err) {
+    if(err.type) return err.type;
+    return "#ERR";
   },
   _locate: function(em, add) {
     var xy = [add&&em?em.offsetWidth:0, add&&em?em.offsetHeight:0];
