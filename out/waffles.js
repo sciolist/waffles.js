@@ -338,19 +338,30 @@ requireCode["./macro"] = function(exports) {
   var Macro = exports.Macro = {
     VALUES: function(args) {
       var results = [];
+      if(args && (!args.length || (args.length && args.substr))) {
+        return [args];
+      }
+  
       for(var i=0; i<args.length; ++i) {
-        if(args[i] instanceof Span) {
-          var cells = args[i].values();
+        var value = args[i];
+  
+        if(value instanceof Span) {
+          var cells = value.values();
           if(!cells || !cells.length) continue;
-          for(var q=0; q<cells.length; ++q) {
-            results.push(cells[q]);
+          for(var j=0; j<cells.length; ++j) {
+            results.push(cells[j]);
           }
-        } else if(args[i] && args[i].length && !(args[i] instanceof String)) {
-          for(var q=0; q<args[i].length; ++q) {
-            results.push(args[i][q]);
-          }
+          continue;
         }
-        else results.push(args[i]);
+  
+        if(value && value.length && !value.substr) {
+          for(var j=0; j<value.length; ++j) {
+            results.push(value[j]);
+          }
+          continue;
+        }
+  
+        results.push(value);
       };
       return results;
     },
@@ -379,9 +390,11 @@ requireCode["./macro"] = function(exports) {
     MAP: function() {
       var args = Array.prototype.slice.call(arguments);
       var mapper = args.pop();
-      if(args.length === 1 && !isNaN(args[0].length)) {
+  
+      if(args.length === 1 && !isNaN(args[0].length) && !args[0].substr) {
         args = Array.prototype.slice.call(args[0]);
       }
+  
       var values = Macro.VALUES(args);
       for(var i=0; i<values.length; ++i) {
         values[i] = mapper(values[i]);
@@ -396,6 +409,16 @@ requireCode["./macro"] = function(exports) {
       for(var i=0; i<values.length; ++i) {
         var value = values[i];
         if(filter(value)) results.push(value);
+      }
+      return results;
+    },
+    ZIP: function(first, second, mapper) {
+      var a = Macro.VALUES(first||[]);
+      var b = Macro.VALUES(second||[]);
+      if(!mapper) mapper = function(aa, bb) { return [aa, bb]; }
+      var results = [];
+      for(var i=0; i<a.length; ++i) {
+        results.push(mapper(a[i], b[i]));
       }
       return results;
     },
@@ -476,7 +499,7 @@ requireCode["./scripting"] = function(exports) {
         }
       }
       // bind span ranges
-      this.token("IDENTIFIER", "Span('" + match[0] + "')");
+      this.token("IDENTIFIER", "Span('" + match[0] + "').valueOf()");
       return match[0].length;
     }
     
@@ -505,7 +528,7 @@ requireCode["./scripting"] = function(exports) {
         continue;
       }
       if(book && book.region(token[1])) { // bind all region names
-        token[1] = "Span('" + token[1].replace("'", "\\'") + "')";
+        token[1] = "Span('" + token[1].replace("'", "\\'") + "').valueOf()";
       }
     };
   
@@ -514,7 +537,7 @@ requireCode["./scripting"] = function(exports) {
     var method = eval(js);
     return function(cell) {
       return method.call(cell, cell, function(v) {
-        return Scripting.parseSpan(v, cell).valueOf();
+        return Scripting.parseSpan(v, cell);
       });
     }
   };
