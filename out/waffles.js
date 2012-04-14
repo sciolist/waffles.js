@@ -514,7 +514,7 @@ requireCode["./scripting"] = function(exports) {
     var method = eval(js);
     return function(cell) {
       return method.call(cell, cell, function(v) {
-        return Scripting.parseSpan(v, cell);
+        return Scripting.parseSpan(v, cell).valueOf();
       });
     }
   };
