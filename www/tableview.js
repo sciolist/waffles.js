@@ -276,7 +276,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
 
     var w = cell.outerWidth();
     var requires = this._input[0].scrollWidth - 2;
-    var maxX = this.span.x + this.span.width - 1;
+    var maxX = this.span.x + this.span.width - 3;
     var x = 1;
 
     if(requires > this._input.width()) {
