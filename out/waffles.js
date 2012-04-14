@@ -83,6 +83,14 @@ requireCode["./cell"] = function(exports) {
   var Scripting = require("./scripting").Scripting;
   var util = require("./util");
   
+  exports.CircularDependencyError = util.extend(Error, {
+    type: "#CIRC",
+    init: function() {
+      this.message = "Circular dependency";
+      Error.prototype.constructor.call(this, this.message);
+    }
+  });
+  
   exports.Cell = util.Evented.extend({
     init: function(owner, data, x, y) {
       if(!data) { data = { } }
@@ -123,22 +131,20 @@ requireCode["./cell"] = function(exports) {
       }
       this._dep = [];
     },
-    dependency: function(dep) {
-      this._dep.push(dep);
+    dependency: function(span) {
+      this._dep.push(span);
     },
     _createDependencies: function() {
       var self = this;
       for(var i=0; i<this._dep.length; ++i) {
-        (function(i) {
-          var dep = self._dep[i];
-          dep.on("cell:changed", function(e) {
-            self.valid = false;
-            delete self._data.value;
-            self.emit("changed");
-          });
-          self._dep[i] = function() { dep.destroy(); };
-        })(i);
-      };
+        if(!this._dep[i].on) continue;
+        this._dep[i] = this._dep[i].on("cell:changed", function() {
+          if(!self.valid || self._running) return;
+          self.valid = false;
+          delete self._data.value;
+          self.emit("changed");
+        });
+      }
     },
     value: function(v) {
       if(arguments.length === 0) {
@@ -150,7 +156,11 @@ requireCode["./cell"] = function(exports) {
       this.emit("changed");
     },
     valueOfCached: function() {
-      if(this._error) throw this._error;
+      if(this._error) {
+        console && console.error(this._error);
+        throw this._error;
+      }
+  
       var v = this._data.value;
       if(v === undefined || v === "") return "";
       if(!this._isNumeric(v)) return v.valueOf();
@@ -160,37 +170,39 @@ requireCode["./cell"] = function(exports) {
       return /^\d+(\.\d+)?$/.test(v);
     },
     valueOf: function() {
-      if(this._running) { throw new Error("Circular dependency"); }
+      if(this._running) { throw new exports.CircularDependencyError(); }
       this._running = true;
+  
       if(this.valid) {
         try {
           return this.valueOfCached();
-        } catch(e) {
-          console && console.error(e);
-          throw e;
         } finally {
           this._running = false;
         }
       }
-      var self = this;
+  
       delete this._error;
-      this.valid = false;
-      this._running = true;
+      this.valid = true;
       this._clearDependencies();
       try {
         var value = this._data.formula;
         if(value !== undefined && value[0] === "=") {
-          value = Scripting.compile(this, value.substring(1)).call(this, this);
+          var compiled = Scripting.compile(this, value.substring(1));
+          value = compiled(this);
+          if(value) value = value.valueOf();
         }
       } catch(e) {
-        console && console.error(e);
         this._error = e;
+        console && console.error(e);
         value = undefined;
+        throw e;
       }
-      this.valid = true;
-      this._running = false;
-      this._data.value = value;
-      this._createDependencies();
+      finally {
+        this.valid = true;
+        this._running = false;
+        this._data.value = value;
+        this._createDependencies();
+      }
       return this.valueOfCached();
     }
   });
@@ -301,10 +313,10 @@ requireCode["./macro"] = function(exports) {
       var results = [];
       for(var i=0; i<args.length; ++i) {
         if(args[i] instanceof Span) {
-          var cells = args[i].cells();
+          var cells = args[i].values();
           if(!cells || !cells.length) continue;
           for(var q=0; q<cells.length; ++q) {
-            results.push(cells[q].valueOf());
+            results.push(cells[q]);
           }
         } else if(args[i] && args[i].length && !(args[i] instanceof String)) {
           for(var q=0; q<args[i].length; ++q) {
@@ -318,7 +330,7 @@ requireCode["./macro"] = function(exports) {
     REDUCE: function() {
       var args = Array.prototype.slice.call(arguments);
       var aggregator = args.pop();
-      var seed = 0;
+      var seed = undefined;
       if(!aggregator.call) {
         seed = aggregator;
         aggregator = args.pop();
@@ -409,8 +421,10 @@ requireCode["./scripting"] = function(exports) {
   
   // Load CoffeeScript.
   var Coffee = typeof CoffeeScript === "undefined" ? require("coffee-script") : CoffeeScript;
-  if(!Coffee.require) Coffee.require = function(v) {
-    return require("coffee-script/lib/" + v.substring(1));
+  if(!Coffee.require) {
+    Coffee.require = function(v) {
+      return require("coffee-script/lib/coffee-script/" + v.substring(1));
+    }
   }
   
   var Scripting = exports.Scripting = {};
@@ -420,6 +434,7 @@ requireCode["./scripting"] = function(exports) {
     var sheet = cell ? cell.owner : null;
     var book = sheet ? sheet.owner : null;
   
+    var dependencies = [];
     var parser = Coffee.require("./parser");
     var lexerClass = Coffee.require("./lexer").Lexer;
     var lexer = new lexerClass();
@@ -433,7 +448,8 @@ requireCode["./scripting"] = function(exports) {
           return old.apply(this, arguments);
         }
       }
-      this.token("IDENTIFIER", "Scripting.parseSpan('" + match[0] + "', cell)");
+      // bind span ranges
+      this.token("IDENTIFIER", "Span('" + match[0] + "')");
       return match[0].length;
     }
     
@@ -442,11 +458,13 @@ requireCode["./scripting"] = function(exports) {
       ["RETURN", "return", 0],
       ["PARAM_START", "(", 0],
       ["IDENTIFIER", "cell", 0],
+      [",", ",", 0],
+      ["IDENTIFIER", "Span", 0],
       ["PARAM_END", ")", 0],
       ["->", "->", 0],
       ["INDENT", 2, 0],
       ["OUTDENT", 2, 0] 
-    ];
+      ];
     var method = lexer.tokenize(code);
     method.unshift(tokens.length-1, 0);
     tokens.splice.apply(tokens, method);
@@ -459,14 +477,19 @@ requireCode["./scripting"] = function(exports) {
         token[1] = "Macro." + token[1];
         continue;
       }
-      if(book && book.region(token[1])) {
-        token[1] = "Scripting.parseSpan('" + token[1].replace("'", "\'") + "', cell)";
+      if(book && book.region(token[1])) { // bind all region names
+        token[1] = "Span('" + token[1].replace("'", "\\'") + "')";
       }
     };
   
     var results = parser.parse(tokens);
     var js = results.compile();
-    return eval(js);
+    var method = eval(js);
+    return function(cell) {
+      return method.call(cell, cell, function(v) {
+        return Scripting.parseSpan(v, cell);
+      });
+    }
   };
   Scripting.columnName = function(number) {
     var min = "A".charCodeAt(0) - 1;
@@ -531,12 +554,13 @@ requireCode["./scripting"] = function(exports) {
     var fromY = Math.min(parsedTo[1], parsedFrom[1]);
     var toX = Math.max(parsedTo[0], parsedFrom[0]);
     var toY = Math.max(parsedTo[1], parsedFrom[1]);
-    var width = 1 + toX - fromX;
+    var width  = 1 + toX - fromX;
     var height = 1 + toY - fromY;
   
     var span = new Span(targetSheet, fromX, fromY, width, height);
     if(cell && cell.dependency) cell.dependency(span);
-    return width == 1 && height == 1 ? span.valueOf() : span;
+    return span;
+    //return width == 1 && height == 1 ? span.valueOf() : span;
   }
   
 };
@@ -671,6 +695,14 @@ requireCode["./span"] = function(exports) {
       }
       this.sheet(sheet);
     },
+    clone: function() {
+      return new exports.Span(this._sheet, this.x, this.y, this.width, this.height);
+    },
+    equalTo: function(other) {
+      return this.sheet() === other.sheet() &&
+             this.x === other.x && this.y === other.y &&
+             this.width === other.width && this.height === other.height;
+    },
     data: function(includeSheet) {
       var result = {
         x: this.x, y: this.y,
@@ -796,7 +828,9 @@ requireCode["./span"] = function(exports) {
         return cells[0];
       }
       return cells;
-    }
+    },
+    dimensions: function() { return { x: this.x, y: this.y, width: this.width, height: this.height }; },
+    toString: function() { return this.valueOf(); }
   });
   
 };
@@ -810,19 +844,39 @@ requireCode["./util"] = function(exports) {
     return newObject;
   }
   
-  exports.Class = function Class() { }
-  exports.Class.extend = function(data) {
+  exports.merge = function() {
+    var tgt = arguments[0];
+    for(var i=1; i<arguments.length; ++i) {
+      for(var key in arguments[i]) {
+        if(!Object.hasOwnProperty.call(arguments[i], key)) continue;
+        tgt[key] = arguments[i][key];
+      }
+    }
+    return tgt;
+  }
+  
+  exports.extend = function(data) {
     var parent = this;
     if(arguments.length === 2) {
       parent = data;
       data = arguments[1];
     }
+  
+    var parentWrapper = function(){};
+    parentWrapper.prototype = parent.prototype;
+    var prototype = new parentWrapper();
+    exports.merge(prototype, data);
+  
     var cls = data.init || function(){};
-    cls.base = data.__proto__ = parent.prototype;
-    cls.extend = arguments.callee;
-    cls.prototype = data;
+    cls.constructor = cls;
+    cls.prototype = prototype;
+    cls.base   = parent.prototype;
+    cls.extend = exports.Class.extend;
     return cls;
   };
+  
+  exports.Class = function Class() { }
+  exports.Class.extend = exports.extend;
   
   exports.SheetError = exports.Class.extend(Error, {
     init: function(code, msg) {
