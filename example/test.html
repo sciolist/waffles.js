@@ -58,10 +58,19 @@
           }
         }
       };
+
       book = new Waffles.Book(data);
       tbl = new Spreadsheet($(".container"), book);
-    });
+      
+      function x() {
+        setTimeout(function() {
+          $("#data").text(JSON.stringify(book.data));
+        }, 16);
+      }
+      book.onAny(x);
+      x();
 
+    });
     </script>
     
     <style type="text/css">
@@ -75,11 +84,22 @@
         border-bottom-color: #444;
         border: 16px solid white;
 
+        position: relative;
+        height: 70%;
+      }
+
+      html, body { height: 100%; }
+
+      #data {
         position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        right: 0;
+        margin: 32px 16px 16px;
+        padding: 6px;
+        top: 70%;
+        left: 8px;
+        width: 95%;
+        height: 20%;
+        white-space: normal;
+        overflow: auto;
       }
 
     </style>
@@ -87,6 +107,8 @@
   <body>
 
     <div class="container"></div>
+
+    <textarea id="data"></textarea>
 
   </body>
 </html>
