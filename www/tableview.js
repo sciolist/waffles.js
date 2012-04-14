@@ -477,15 +477,15 @@ var TableView = Waffles.util.Class(function TableView(def) {
   };
 
   def._locate = function _locate(em, add) {
-    var rect = em.getBoundingClientRect();
-    var baseRect = this._locateBaseRect || (this._locateBaseRect = this.em[0].getBoundingClientRect());
-
-    var result = [rect.left, rect.top];
-    result[0] -= baseRect.left;
-    result[1] -= baseRect.top;
+    var result = [0, 0];
     if(add) {
-      result[0] += rect.width;
-      result[1] += rect.height;
+      result[0] += em.offsetWidth;
+      result[1] += em.offsetHeight;
+    }
+    while(em != this.em[0]) {
+      result[0] += em.offsetLeft;
+      result[1] += em.offsetTop;
+      em = em.offsetParent;
     }
     return result;
   };
