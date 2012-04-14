@@ -25,21 +25,30 @@
             rows: {
               0: {
                 0: { formula: "search for>" },
-                1: { formula: "dropbox" }
+                1: { formula: "dropbox" },
               },
 
               1: {
                 0: { formula: "query url>" },
-                1: { formula: '="http://search.twitter.com/search.json?q=#{B1}&rpp=1&callback=?"' }
+                1: { formula: '="http://search.twitter.com/search.json?q=#{encodeURIComponent(B1)}&rpp=10&callback=?"' }
               },
 
               2: {
                 0: { formula: "raw data>" },
-                1: { formula: "=$.getJSON(B2, (r)->cell.value(r.results && r.results[0]))" }
+                1: { formula: "=$.getJSON(B2, (r)->cell.value(r.results))" },
+                2: { formula: "..." }
               },
 
-              3: {
-                0: { formula: '=B3.from_user && "#{B3.from_user} says: #{B3.text}"' }
+              4: { 0: { formula: "Tweets:" }, },
+
+              5: {
+                0: { formula: "0" },
+                1: { formula: '=B3[A6] && "#{B3[A6].from_user}: #{B3[A6].text}"' },
+              },
+
+              6: {
+                0: { formula: "1" },
+                1: { formula: '=B3[A7] && "#{B3[A7].from_user}: #{B3[A7].text}"' },
               }
             },
 
