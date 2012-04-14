@@ -2,25 +2,30 @@
 <html>
   <head>
     <title>Testing</title>
+    <!--
+    <base href="https://raw.github.com/sciolist/waffles.js/master/www/">
+    -->
+
     <script type="text/javascript" src="coffee-script.js"></script>
-    <script type="text/javascript" src="../out/waffles.js"></script>
-    <script type="text/javascript" src="http://code.jquery.com/jquery-latest.min.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
     <script type="text/javascript" src="scrolls.js"></script>
+    <script type="text/javascript" src="../out/waffles.js"></script>
     <script type="text/javascript" src="tableview.js"></script>
+
     <script type="text/javascript">
 
     $(function() {
       var data = {
         sheets: {
           "Sheet1": {
-            /*sizes: {
-              x: { 0: 20, 1: 20, 2: 20, 3: 20, 4: 20, 5: 20, 6: 20 },
-              y: { 3: 40 }
-              }*/
+//            sizes: {
+//              x: { 0: 20, 1: 20, 2: 20, 3: 20, 4: 20, 5: 20, 6: 20 },
+//              y: { 3: 40 }
+//              }
           }
         }
       };
-      var book = new Waffles.Book(data);
+      book = new Waffles.Book(data);
       tbl = new TableView($(".waffles"), book);
     });
 
@@ -30,13 +35,20 @@
 
       #container {
 
-        border: 7px solid #888;
+        border: 2px solid #888;
         border-top-color: #BBB;
         border-bottom-color: #444;
-        
+        border: 16px solid white;
+
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        /*
         width: 500px;
         height: 250px;
-        position: relative;
+        position: relative;*/
       }
 
       #inputWrapper {
@@ -57,11 +69,14 @@
         padding: 0 1px 1px 0px;
         text-indent: 3px;
         margin: 0;
-        /*box-shadow: 0px 0px 3px #000;*/
+        font-family: verdana;
+        overflow: hidden;
+        box-shadow: 0px 0px 3px #000;
       }
+      
       td.data.selected div {
         position: relative;
-        z-index: 10;
+        z-index: 9;
         background: #FFFFFF;
       }
       td.error {
@@ -72,8 +87,16 @@
         border: 1px solid #CECECE;
         white-space: pre-wrap;
       }
-      td div {
+      td.overflowing-from { border-right: 1px solid transparent; }
+      td.overflowing-into { border-left: 1px solid transparent; }
+      td.overflowing-from div div, td.overflowing-into div div {
+        position: relative;
+        z-index: 10;
+      }
+      td.data div div {
         overflow: hidden;
+      }
+      td div {
         white-space: nowrap;
         pointer-events: none;
       }
