@@ -1,10 +1,13 @@
-var TableView = Waffles.util.Class(function TableView(def) {
+var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
   def.constructor = function(em, book) {
     var self = this;
     this.queue = [];
     this.book = book;
-    this.em = em.css("overflow", "hidden");
+
+    this.em = $("<div>").addClass("spreadsheet");
+    $(em).append(this.em);
+
     var sheet = book.sheet("Sheet1");
     this.span = new Waffles.Span(sheet, 0, 0, 10, 10);
     this.selection = new Waffles.Span(sheet, 0, 0, 1, 1);
@@ -201,7 +204,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
   };
   
   def.createSelectionDragger = function() {
-    this._selection = $("<div>").addClass("selectionWrapper");
+    this._selection = $("<div>").addClass("selection-wrapper");
     $("<div>").addClass("selection").appendTo(this._selection);
     $("<div>").addClass("drag").appendTo(this._selection);
     this.em.prepend(this._selection);
@@ -314,8 +317,8 @@ var TableView = Waffles.util.Class(function TableView(def) {
 
   def.createEditInput = function() {
     var self = this;
-    var inputWrapper = this._inputWrapper = $("<div>").addClass("hidden").attr("id", "inputWrapper").appendTo(this.em);
-    var input = this._input = $("<textarea wrap=off>").attr("id", "input").appendTo(inputWrapper);
+    var inputWrapper = this._inputWrapper = $("<div>").addClass("hidden").addClass("input-wrapper").appendTo(this.em);
+    var input = this._input = $("<textarea wrap=off>").addClass("input").appendTo(inputWrapper);
     var em = input[0];
 
     input.keyup(function(e) {

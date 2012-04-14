@@ -4,8 +4,13 @@ require "json"
 task :default => [:"build:browser"] do
 end
 
+desc "Builds the css file"
+task :"build:css" do
+  `sass web/spreadsheet.scss out/spreadsheet.css`
+end
+
 desc "Builds a javascript file for inclusion in web browsers."
-task :"build:browser" do
+task :"build:js" do
   pkg = File.open "package.json" do |f|
     JSON.parse f.read
   end

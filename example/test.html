@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Testing</title>
+    <!--
+    <base href="https://raw.github.com/sciolist/waffles.js/master/www/">
+    -->
+
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/coffee-script/1.3.1/coffee-script.min.js"></script>
+    <script src="https://raw.github.com/hij1nx/EventEmitter2/master/lib/eventemitter2.js"></script>
+    <script src="http://code.jquery.com/jquery-latest.js"></script>
+    <script src="../out/waffles.js"></script>
+    <script src="../web/scrolls.js"></script>
+    <script src="../web/spreadsheet.js"></script>
+    <link rel="Stylesheet" type="text/css" href="../out/spreadsheet.css" />
+
+    <script>
+
+    $(function() {
+      var data = {
+        sheets: {
+
+          "Sheet1": {
+            
+            rows: {
+              0: {
+                0: { formula: "search for>" },
+                1: { formula: "dropbox" }
+              },
+
+              1: {
+                0: { formula: "query url>" },
+                1: { formula: '="http://search.twitter.com/search.json?q=#{B1}&rpp=1&callback=?"' }
+              },
+
+              2: {
+                0: { formula: "raw data>" },
+                1: { formula: "=$.getJSON(B2, (r)->cell.value(r.results && r.results[0]))" }
+              },
+
+              3: {
+                0: { formula: '=B3.from_user && "#{B3.from_user} says: #{B3.text}"' }
+              }
+            },
+
+            sizes: {
+              y: { 3: 40 }
+            }
+          }
+        }
+      };
+      book = new Waffles.Book(data);
+      tbl = new Spreadsheet($(".container"), book);
+    });
+
+    </script>
+    
+    <style type="text/css">
+
+      .container {
+        font-family: verdana;
+        font-size: 12px;
+
+        border: 2px solid #888;
+        border-top-color: #BBB;
+        border-bottom-color: #444;
+        border: 16px solid white;
+
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        right: 0;
+      }
+
+    </style>
+  </head>
+  <body>
+
+    <div class="container"></div>
+
+  </body>
+</html>
+
