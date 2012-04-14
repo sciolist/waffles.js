@@ -112,7 +112,7 @@ requireCode["./cell"] = function(exports) {
       this.x = x;
       this.y = y;
       this._data = data;
-      this.valid = this._data.value !== undefined || this._data.formula === undefined;
+      this.valid = this._data.formula === undefined;
       this._dep = [];
     };
   
@@ -131,9 +131,9 @@ requireCode["./cell"] = function(exports) {
       this.valid = value !== undefined;
       this._data.formula = formula;
       if(value !== undefined) {
-        this._data.value = value;
+        this._value = value;
       } else {
-        delete this._data.value;
+        delete this._value;
       }
       delete this._error;
       if(emit) { this.emit("changed"); }
@@ -163,7 +163,7 @@ requireCode["./cell"] = function(exports) {
           function onChange() {
             if(!self.valid || self._running) return;
             self.valid = false;
-            delete self._data.value;
+            delete self._value;
             self.emit("changed");
           }
           span.on("cell.changed", onChange);
@@ -178,7 +178,7 @@ requireCode["./cell"] = function(exports) {
       if(arguments.length === 0) {
         return this.valueOf();
       }
-      this._data.value = v;
+      this._value = v;
       this.valid = true;
       this._error = null;
       this.emit("changed");
@@ -190,7 +190,7 @@ requireCode["./cell"] = function(exports) {
         throw this._error;
       }
   
-      var v = this._data.value;
+      var v = this._value;
       if(v === undefined || v === "") return "";
       if(!isNumeric(v)) return v.valueOf();
       return Number(v);
@@ -227,7 +227,7 @@ requireCode["./cell"] = function(exports) {
       finally {
         this.valid = true;
         this._running = false;
-        this._data.value = value;
+        this._value = value;
         this._createDependencies();
       }
       return this.valueOfCached();
