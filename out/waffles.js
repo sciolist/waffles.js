@@ -178,7 +178,6 @@ requireCode["./cell"] = function(exports) {
       if(arguments.length === 0) {
         return this.valueOf();
       }
-      this._data.formula = v;
       this._data.value = v;
       this.valid = true;
       this._error = null;
