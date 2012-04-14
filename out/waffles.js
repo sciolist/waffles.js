@@ -580,6 +580,7 @@ requireCode["./scripting"] = function(exports) {
     return result;
   };
   Scripting.parseSpan = function(value, cell) {
+    if(value) value += '';
     var sheet = cell && cell.owner;
     var book = sheet && sheet.owner;
     var region = book && book.region(value);
@@ -611,7 +612,6 @@ requireCode["./scripting"] = function(exports) {
     var span = new Span(targetSheet, fromX, fromY, width, height);
     if(cell && cell.dependency) cell.dependency(span);
     return span;
-    //return width == 1 && height == 1 ? span.valueOf() : span;
   }
   
 };
