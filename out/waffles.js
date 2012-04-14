@@ -121,24 +121,25 @@ requireCode["./cell"] = function(exports) {
     };
   
     def.formula = function(formula, value, emit) {
-      if(arguments.length > 0) {
-        if(arguments.length < 3) {
-          emit = true;
-        }
-        this.valid = value !== undefined;
-        this._data.formula = formula;
-        if(value !== undefined) {
-          this._data.value = value;
-        } else {
-          delete this._data.value;
-        }
-        delete this._error;
-        if(emit) {
-          this.emit("changed");
-        }
-        return;
+      if(arguments.length === 0) {
+        return this._data.formula;
       }
-      return this._data.formula;
+      if(arguments.length < 3) {
+        emit = true;
+      }
+  
+      this.valid = value !== undefined;
+      this._data.formula = formula;
+      if(value !== undefined) {
+        this._data.value = value;
+      } else {
+        delete this._data.value;
+      }
+      delete this._error;
+      if(emit) { this.emit("changed"); }
+      if(this._data.formula === undefined || this._data.formula === "" || this._data.formula === null) {
+        this.owner.deleteCell(this.x, this.y);
+      }
     };
   
     def._clearDependencies = function() {
@@ -177,6 +178,7 @@ requireCode["./cell"] = function(exports) {
       if(arguments.length === 0) {
         return this.valueOf();
       }
+      this._data.formula = v;
       this._data.value = v;
       this.valid = true;
       this._error = null;
@@ -651,6 +653,15 @@ requireCode["./sheet"] = function(exports) {
         }
       }
       return [x,y];
+    };
+  
+    def.deleteCell = function(x, y) {
+      if(!this._data.rows[y]) return;
+      if(this._data.rows && this._data.rows[y]) delete this._data.rows[y][x];
+      if(this.rows && this.rows[y]) delete this.rows[y][x];
+      for(var key in this._data.rows[y]) return;
+      if(this._data.rows) delete this._data.rows[y];
+      if(this.rows) delete this.rows[y];
     };
   
     def._createCell = function(x, y) {
