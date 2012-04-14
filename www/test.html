@@ -90,11 +90,12 @@
       }
       td.overflowing-from { border-right: 1px solid transparent; }
       td.overflowing-into { border-left: 1px solid transparent; }
-      td.overflowing-from div, td.overflowing-into div {
+      td.overflowing-from > div, td.overflowing-into > div {
         position: relative;
         z-index: 10;
+        overflow: inherit;
       }
-      td.data div {
+      td.data div div {
         overflow: hidden;
       }
       td div {

@@ -415,8 +415,8 @@ var TableView = Waffles.util.Class(function TableView(def) {
 
   def.assignValue = function(node, dataCell) {
     if(node.length) { node = node[0]; }
-    if(node.nodeName == "TD") { node = node.childNodes[0].childNodes[0]; }
-    var td = node.parentNode.parentNode;
+    if(node.nodeName == "TD") { node = node.childNodes[0].childNodes[0].childNodes[0]; }
+    var td = node.parentNode.parentNode.parentNode;
     $(td).removeClass("error");
 
     var value;
@@ -431,41 +431,30 @@ var TableView = Waffles.util.Class(function TableView(def) {
       node.nodeValue = value;
     }
 
-    var text = td.childNodes[0].childNodes[0];
-    if(dataCell) this.resizeToFit(text, dataCell);
+    if(dataCell) this.resizeToFit(node.parentNode, dataCell);
   };
 
   def.onVisibleCellChanged = function(node, dataCell) {
-    var td = $(node).closest("td"), em = td;
-    while(em.hasClass("overflowing")) {
-      em.prev().removeClass("overflowing overflowing-from");
-      em.removeClass("overflowing overflowing-into overflowing-from");
-      em = em.next();
-    }
-    this.assignValue(node, dataCell);
+    this.refreshInnerValues();
   };
 
   // Fills up empty neighbours if a cell is overflowing.
-  def.resizeToFit = function(node, dataCell) {
-    var node = node.parentNode;
+  def.resizeToFit = function(node, dataCell, log) {
     var self = this;
     var reset = [];
 
     var w = $(node).parent().width(), x = 1;
     $(node).width(w);
     var requires = node.scrollWidth - 4;
-    var last = $(node).closest("td").removeClass("overflowing overflowing-into overflowing-from");
-
-    console.log(node.childNodes[0].nodeValue);
+    var last = $(node).closest("td");
 
     var needsResizing = w < requires;
     while(w < requires) {
       var nextEm = this.cellAt(dataCell.x + x - this.span.x, dataCell.y - this.span.y)[0];
-      if(!nextEm) break;
+      if(!nextEm) { break; }
 
       var dat = this.dataCell($(nextEm));
       var text = dat ? dat.valueOf() : "";
-      console.log(text);
       
       if(text && /[^\s]/.test(text.nodeValue)) break;
       if(last) last.addClass("overflowing-from");
@@ -476,13 +465,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
       x += 1;
     }
 
-    while(last && (last = last.next()) && last.hasClass("overflowing")) {
-      last.removeClass("overflowing overflowing-from overflowing-into");
-    }
-
     if(!needsResizing) return;
-    var span = new Waffles.Span(dataCell.owner, dataCell.x, dataCell.y, x + 1, 1);
-    span.once("cell.changed", function() { self.resizeToFit(node, dataCell); });
     if(x > 1) {
       $(node).width(w).closest("td").addClass("overflowing overflowing-from");
     }
@@ -607,6 +590,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
       var row = table.rows[y];
       for(var x=row.cells.length-1; x>=1; --x) {
         var cell = row.cells[x];
+        cell.className = "data";
         var dataCell = cellMap[(y - 1) * this.span.width + (x - 1)];
         this.assignValue(cell, dataCell);
       }
@@ -661,7 +645,8 @@ var TableView = Waffles.util.Class(function TableView(def) {
 
         if(newCell) {
           cell = $("<td>").appendTo(row)[0];
-          var text = document.createTextNode("");
+          var text = document.createElement("div");
+          text.appendChild(document.createTextNode(""));
 
           var wrapper = document.createElement("div");
           wrapper.appendChild(text);
@@ -684,7 +669,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
           // LEFT HEADER
           cell.className = "header header-y header-y" + (y - 1);
           cell.setAttribute("data-header-y", y-1);
-          text.nodeValue = this.span.y + y;
+          text.childNodes[0].nodeValue = this.span.y + y;
           cell.style.width = defaultWidth + "px";
 
 
@@ -692,7 +677,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
           // TOP HEADER
           cell.className = "header header-x header-x" + (x - 1);
           cell.setAttribute("data-header-x", x-1);
-          text.nodeValue = Waffles.Scripting.columnName(this.span.x+x);
+          text.childNodes[0].nodeValue = Waffles.Scripting.columnName(this.span.x+x);
           cell.style.height = defaultHeight + "px";
           
 

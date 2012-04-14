@@ -19,10 +19,10 @@ requireCode["./book"] = function(exports) {
   
     def.constructor = function(data) {
       util.Evented.constructor.call(this);
-      this.data = util.merge(data || {}, {
+      this.data = util.merge({
         sheets: {},
         regions: {}
-      });
+      }, data || {});
   
       this._regions = {};
       this._sheets = {};
@@ -659,8 +659,10 @@ requireCode["./sheet"] = function(exports) {
     def.sizes = function() {
       var results = this._data.sizes;
       if(results === undefined) {
-        results = this._data.sizes = { x: {}, y: {} }
+        results = this._data.sizes = {}
       }
+      if(!results.x) results.x = {};
+      if(!results.y) results.y = {};
       return results;
     };
   
