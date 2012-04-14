@@ -289,7 +289,10 @@ var TableView = Waffles.util.Class(function TableView(def) {
       }
       this._input.width(w);
     }
-    this._input[0].scrollLeft = 100000;
+
+    if(jQuery.browser.mozilla) { // FF doesn't autoscroll in wrap=off textareas..
+      this._input[0].scrollLeft = this._input[0].selectionStart;
+    }
   };
 
   def.showEditInput = function(updateValue) {
@@ -434,6 +437,11 @@ var TableView = Waffles.util.Class(function TableView(def) {
     if(dataCell) this.resizeToFit(node.parentNode, dataCell);
   };
 
+  def.getErrorMessage = function(err) {
+    if(err.message) return err.message;
+    return "#ERR";
+  };
+
   def.onVisibleCellChanged = function(node, dataCell) {
     this.refreshInnerValues();
   };
@@ -452,10 +460,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
     while(w < requires) {
       var nextEm = this.cellAt(dataCell.x + x - this.span.x, dataCell.y - this.span.y)[0];
       if(!nextEm) { break; }
-
-      var dat = this.dataCell($(nextEm));
-      var text = dat ? dat.valueOf() : "";
-      
+      var text = nextEm.childNodes[0].childNodes[0].childNodes[0];
       if(text && /[^\s]/.test(text.nodeValue)) break;
       if(last) last.addClass("overflowing-from");
       last = $(nextEm).closest("td");
@@ -469,11 +474,6 @@ var TableView = Waffles.util.Class(function TableView(def) {
     if(x > 1) {
       $(node).width(w).closest("td").addClass("overflowing overflowing-from");
     }
-  };
-
-  def.getErrorMessage = function(err) {
-    if(err.type) return err.type;
-    return "#ERR";
   };
 
   def._locate = function _locate(em, add) {
