@@ -64,7 +64,8 @@
       
       function x() {
         setTimeout(function() {
-          $("#data").text(JSON.stringify(book.data));
+          var data = JSON.stringify(book.data, null, 2);
+          $("#data").text(data);
         }, 16);
       }
       book.onAny(x);
@@ -98,7 +99,6 @@
         left: 8px;
         width: 95%;
         height: 20%;
-        white-space: normal;
         overflow: auto;
       }
 
