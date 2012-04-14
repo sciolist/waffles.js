@@ -96,10 +96,9 @@ requireCode["./cell"] = function(exports) {
   exports.CircularDependencyError = util.Class(function CircularDependencyError(def) {
     this.inherit(Error);
   
-    def.type = "#CIRC";
     def.constructor = function() {
       this.message = "Circular dependency";
-      Error.constructor.call(this, this.message);
+      this.type = "#CIRC";
     }
   });
   
@@ -158,12 +157,19 @@ requireCode["./cell"] = function(exports) {
       var self = this;
       for(var i=0; i<this._dep.length; ++i) {
         if(!this._dep[i].on) continue;
-        this._dep[i] = this._dep[i].on("cell.changed", function() {
-          if(!self.valid || self._running) return;
-          self.valid = false;
-          delete self._data.value;
-          self.emit("changed");
-        });
+        (function() {
+          var span = self._dep[i];
+          function onChange() {
+            if(!self.valid || self._running) return;
+            self.valid = false;
+            delete self._data.value;
+            self.emit("changed");
+          }
+          span.on("cell.changed", onChange);
+          self._dep[i] = function() {
+            span.off("cell.changed", onChange);
+          }
+        })(i);
       }
     };
   
@@ -792,7 +798,9 @@ requireCode["./span"] = function(exports) {
   
     def.cell = function(x, y, create) {
       if(arguments.length < 3) create = true;
-      if(x < 0 || y < 0 || x >= this.width || y >= this.height) { throw new Error("Index outside span."); }
+      if(x < 0 || y < 0 || x >= this.width || y >= this.height) {
+        throw new Error("Index outside span.");
+      }
       return this._sheet.cell(x+this.x, y+this.y, create);
     };
   
@@ -890,13 +898,18 @@ requireCode["./span"] = function(exports) {
       }
       var cells = this.values(sorted);
       if(cells.length <= 1) {
-        return cells[0];
+        var value = (cells.length ? cells[0] : "").valueOf();
+        return value === undefined ? "" : value;
       }
       return cells;
     };
   
     def.dimensions = function() { return { x: this.x, y: this.y, width: this.width, height: this.height }; },
-    def.toString = function() { return this.valueOf(); }
+    def.toString = function() {
+      var result = this.valueOf();
+      if(result === undefined) return "";
+      return result.toString();
+    }
   });
   
 };
