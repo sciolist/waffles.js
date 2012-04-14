@@ -1,5 +1,6 @@
-var TableView = Waffles.util.Class.extend({
-  init: function(em, book) {
+var TableView = Waffles.util.Class(function TableView(def) {
+
+  def.constructor = function(em, book) {
     var self = this;
     this.queue = [];
     this.book = book;
@@ -29,7 +30,9 @@ var TableView = Waffles.util.Class.extend({
       self.hideEditInput();
       self.refreshValues();
     });
-    this.span.on("cell:changed", function(e, span) {
+
+    this.span.on("cell.changed", function(e) {
+      var span = this;
       self.queue.push(function() {
         self.onVisibleCellChanged(self.cellAt(e.cell.x - span.x, e.cell.y - span.y), e.cell);
       });
@@ -41,7 +44,6 @@ var TableView = Waffles.util.Class.extend({
     this.refreshValues();
     this.createSelectionDragger();
     this.rigMouse();
-
     
     setInterval(function() {
       while(self.queue.length) {
@@ -56,9 +58,9 @@ var TableView = Waffles.util.Class.extend({
       });
       self.updateSelection();
     });
-  },
+  };
   
-  createVerticalScroll: function() {
+  def.createVerticalScroll = function() {
     var self = this;
     var area = this.span.sheet().area();
     var updatingScroll = false;
@@ -98,7 +100,7 @@ var TableView = Waffles.util.Class.extend({
     });
   },
   
-  createHorizontalScroll: function() {
+  def.createHorizontalScroll = function() {
     var self = this;
     var area = this.span.sheet().area();
     var updatingScroll = false;
@@ -137,11 +139,11 @@ var TableView = Waffles.util.Class.extend({
       if(isScrolling) { return; }
       bar.scroll(self.span.x * 10);
     });
-  },
+  };
   
   
   
-  rigMouse: function() {
+  def.rigMouse = function() {
     var isDragging = false;
     var startCell = null;
     var self = this;
@@ -196,19 +198,20 @@ var TableView = Waffles.util.Class.extend({
         return;
       }
     });
-  },
+  };
   
-  
-  createSelectionDragger: function() {
+  def.createSelectionDragger = function() {
     this._selection = $("<div>").addClass("selectionWrapper");
     $("<div>").addClass("selection").appendTo(this._selection);
     $("<div>").addClass("drag").appendTo(this._selection);
     this.em.prepend(this._selection);
-  },
-  editInputVisible: function() {
+  };
+
+  def.editInputVisible = function() {
     return !this._inputWrapper.hasClass("hidden");
-  },
-  scrollToFocus: function() {
+  };
+
+  def.scrollToFocus = function() {
     this._scrollToFocus = true;
     var dx = 0, dy = 0;
 
@@ -244,14 +247,16 @@ var TableView = Waffles.util.Class.extend({
       this.span.moveBy(dx, dy);
     }
     this._scrollToFocus = false;
-  },
-  dataCell: function(cell, create) {
+  };
+
+  def.dataCell = function(cell, create) {
     var x = Number(cell.x||cell.attr("data-x"));
     if(x == null) { return; }
     var y = Number(cell.y||cell.attr("data-y"));
     return this.span.cell(x, y, !!create);
-  },
-  hideEditInput: function(update) {
+  };
+
+  def.hideEditInput = function(update) {
     if(this._inputWrapper.hasClass("hidden")) { return; }
     this._inputWrapper.addClass("hidden");
     this._inputWrapper[0].style.cssText = "";
@@ -263,9 +268,9 @@ var TableView = Waffles.util.Class.extend({
       }
     }
     this._input.val("").select();
-  },
+  };
 
-  fitEditInput: function() {
+  def.fitEditInput = function() {
     var sel = this.selectionFocus;
     var cell = this.cellAt(sel.x, sel.y);
 
@@ -285,9 +290,9 @@ var TableView = Waffles.util.Class.extend({
       this._input.width(w);
     }
     this._input[0].scrollLeft = 100000;
-  },
+  };
 
-  showEditInput: function(updateValue) {
+  def.showEditInput = function(updateValue) {
     this.scrollToFocus();
 
     var cellLocation = {x:this.selectionFocus.x,y:this.selectionFocus.y};
@@ -302,8 +307,9 @@ var TableView = Waffles.util.Class.extend({
       this._input.val(dataCell ? dataCell.formula() : "").select();
     }
     this.fitEditInput();
-  },
-  createEditInput: function() {
+  };
+
+  def.createEditInput = function() {
     var self = this;
     var inputWrapper = this._inputWrapper = $("<div>").addClass("hidden").attr("id", "inputWrapper").appendTo(this.em);
     var input = this._input = $("<textarea wrap=off>").attr("id", "input").appendTo(inputWrapper);
@@ -405,8 +411,9 @@ var TableView = Waffles.util.Class.extend({
           break;
       }
     });
-  },
-  assignValue: function(node, dataCell) {
+  };
+
+  def.assignValue = function(node, dataCell) {
     if(node.length) { node = node[0]; }
     if(node.nodeName == "TD") { node = node.childNodes[0].childNodes[0]; }
     var td = node.parentNode.parentNode;
@@ -426,9 +433,9 @@ var TableView = Waffles.util.Class.extend({
 
     var text = td.childNodes[0].childNodes[0];
     if(dataCell) this.resizeToFit(text, dataCell);
-  },
+  };
 
-  onVisibleCellChanged: function(node, dataCell) {
+  def.onVisibleCellChanged = function(node, dataCell) {
     var td = $(node).closest("td"), em = td;
     while(em.hasClass("overflowing")) {
       em.prev().removeClass("overflowing overflowing-from");
@@ -436,10 +443,10 @@ var TableView = Waffles.util.Class.extend({
       em = em.next();
     }
     this.assignValue(node, dataCell);
-  },
+  };
 
   // Fills up empty neighbours if a cell is overflowing.
-  resizeToFit: function(node, dataCell) {
+  def.resizeToFit = function(node, dataCell) {
     var self = this;
     var reset = [];
 
@@ -472,18 +479,18 @@ var TableView = Waffles.util.Class.extend({
 
     if(!needsResizing) return;
     var span = new Waffles.Span(dataCell.owner, dataCell.x, dataCell.y, x + 1, 1);
-    span.once("cell:changed", function() { self.resizeToFit(node, dataCell); });
+    span.once("cell.changed", function() { self.resizeToFit(node, dataCell); });
     if(x > 1) {
       $(node).width(w).closest("td").addClass("overflowing overflowing-from");
     }
-  },
+  };
 
-
-  getErrorMessage: function(err) {
+  def.getErrorMessage = function(err) {
     if(err.type) return err.type;
     return "#ERR";
-  },
-  _locate: function _locate(em, add) {
+  };
+
+  def._locate = function _locate(em, add) {
     var rect = em.getBoundingClientRect();
     var baseRect = this._locateBaseRect || (this._locateBaseRect = this.em[0].getBoundingClientRect());
 
@@ -495,8 +502,9 @@ var TableView = Waffles.util.Class.extend({
       result[1] += rect.height;
     }
     return result;
-  },
-  selectionRing: function() {
+  };
+
+  def.selectionRing = function() {
     if(!this._selection) { return; }
     var minMax = this.minMaxCellsInSpan(this.selection);
     if(!minMax[0].length || !minMax[1].length) {
@@ -513,24 +521,27 @@ var TableView = Waffles.util.Class.extend({
       "height:" + (end[1]-start[1]) + "px",
       "display:block"].join(";");
     return true;
-  },
-  headersInSpan: function(span) {
+  };
+
+  def.headersInSpan = function(span) {
     var minX = span.x - this.span.x, maxX = minX + span.width;
     var minY = span.y - this.span.y, maxY = minY + span.height;
     if(minX < 0 && minY < 0 && maxX < 0 && maxY < 0) { return $([]); }
     var cellSelector = "td.header-x:not(:nth-child(n+" + (2+Math.max(0,maxX)) + ")):nth-child(n+" + (2+Math.max(0,minX)) + ")";
     var rowSelector = "tr:not(:nth-child(n+" + (2+Math.max(0,maxY)) + ")):nth-child(n+" + (2+Math.max(0,minY)) + ") td.header-y";
     return this.table.find(rowSelector + ", " + cellSelector);
-  },
-  cellsInSpan: function(span) {
+  };
+
+  def.cellsInSpan = function(span) {
     var minX = span.x - this.span.x, maxX = minX + span.width;
     var minY = span.y - this.span.y, maxY = minY + span.height;
     if(minX < 0 && minY < 0 && maxX < 0 && maxY < 0) { return $([]); }
     var cellSelector = "td.data:not(:nth-child(n+" + (2+Math.max(0,maxX)) + ")):nth-child(n+" + (2+Math.max(0,minX)) + ")";
     var rowSelector = "tr:not(:nth-child(n+" + (2+Math.max(0,maxY)) + ")):nth-child(n+" + (2+Math.max(0,minY)) + ")";
     return this.table.find(rowSelector + " " + cellSelector);
-  },
-  minMaxCellsInSpan: function(span) {
+  };
+
+  def.minMaxCellsInSpan = function(span) {
     var minX = span.x - this.span.x, maxX = minX + span.width - 1;
     var minY = span.y - this.span.y, maxY = minY + span.height - 1;
     var under = minX < 0 && minY < 0;
@@ -538,16 +549,18 @@ var TableView = Waffles.util.Class.extend({
     var min = this.cellAt(Math.max(0,minX), Math.max(0,minY));
     var max = this.cellAt(Math.min(this.span.width-2,maxX), Math.min(this.span.height-2,maxY));
     return [min, max];
-  },
-  cellAt: function(x, y) {
+  };
+
+  def.cellAt = function(x, y) {
     if(x < 0 || y < 0) { return $(); }
     var rows = this.table[0].rows;
     if(!rows || rows.length <= y+1) { return $(); }
     var cells = rows[y+1].cells;
     if(!cells) { return $(); }
     return $(cells[x+1]);
-  },
-  updateSelection: function updateSelection() {
+  };
+
+  def.updateSelection = function updateSelection() {
     this.table.find(".selected").removeClass("selected");
     this.headersInSpan(this.selection).addClass("selected");
     this.cellsInSpan(this.selectionFocus).addClass("selected");
@@ -558,26 +571,28 @@ var TableView = Waffles.util.Class.extend({
     if(this.editInputVisible()) {
       this.showEditInput(false);
     }
-  },
-  select: function(fromCell, toCell) {
+  };
+  
+  def.select = function(fromCell, toCell) {
     this.hideEditInput();
     this.selectionFocus.location(this.span.x+Number(fromCell.attr("data-x")), this.span.y+Number(fromCell.attr("data-y")));
     if(arguments.length > 1) {
       this.selectionAt.location(this.span.x+Number(toCell.attr("data-x")), this.span.y+Number(toCell.attr("data-y")));
     }
-  },
-  moveSelection: function(resize, x, y) {
+  };
+
+  def.moveSelection = function(resize, x, y) {
     if(resize) {
       this.selectionAt.moveBy(x, y);
     } else {
       this.selectionFocus.moveBy(x, y);
     }
-  },
+  };
 
-  defaultWidth: 80,
-  defaultHeight: 23,
+  def.defaultWidth = 80;
+  def.defaultHeight = 23;
 
-  refreshInnerValues: function refreshInnerValues() {
+  def.refreshInnerValues = function refreshInnerValues() {
     var cells = this.span.cells();
     var cellMap = [];
     for(var i=0; i<cells.length; ++i) {
@@ -593,9 +608,9 @@ var TableView = Waffles.util.Class.extend({
         this.assignValue(cell, dataCell);
       }
     }
-  },
+  };
 
-  refreshValues: function refreshValues() {
+  def.refreshValues = function refreshValues() {
     if(!this.table) {
       this.table = $("<table>").appendTo(this.em);
     }
@@ -620,7 +635,7 @@ var TableView = Waffles.util.Class.extend({
     }
     
     if(this._refreshCache && this._refreshCache.equalTo(this.span)) return;
-    this._refreshCache = this.span.clone();
+    this._refreshCache = Waffles.util.clone(this.span);
     tbl.width(currentWidth);
     for(var y=my; ; ++y) {
       var row = tblEm.rows[y];

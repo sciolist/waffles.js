@@ -14,47 +14,55 @@ requireCode["./book"] = function(exports) {
   var Span = require("./span").Span;
   var util = require("./util");
   
-  exports.Book = util.Evented.extend({
-    init: function(data) {
-      this._data = data || {};
-      if(!this._data.sheets) this._data.sheets = {};
-      if(!this._data.regions) this._data.regions = {};
+  exports.Book = util.Class(function Book(def) {
+    this.inherit(util.Evented);
+  
+    def.constructor = function(data) {
+      util.Evented.constructor.call(this);
+      this.data = util.merge(data || {}, {
+        sheets: {},
+        regions: {}
+      });
+  
       this._regions = {};
       this._sheets = {};
-      if(this._data.code) {
-        new Function("coffeemill", this._data.code).call(this, exports);
+      if(this.data.code) {
+        new Function("book", this.data.code).call(this, this);
       }
-    },
-    sheets: function() {
+    }
+  
+    def.sheets = function() {
       var list = [];
       for(var key in this._data.sheets) {
         list.push(key);
       }
       return list;
-    },
-    sheet: function(name, create) {
+    };
+  
+    def.sheet = function(name, create) {
       if(arguments.length === 1) create = true;
       var self = this;
       var sheet = this._sheets[name];
       if(!sheet) {
-        var data = this._data.sheets[name];
+        var data = this.data.sheets[name];
         if(!data) {
           if(!create) return;
-          data = this._data.sheets[name] = {};
+          data = this.data.sheets[name] = {};
         }
         sheet = this._sheets[name] = new Sheet(this, name, data);
-        sheet.on("*", function(evt, sender) {
-          var e = util.clone(evt);
-          e.sheet = sender;
-          self.emit("sheet:" + e.type, e);
+        sheet.onAny(function(evt) {
+          var e = util.clone(evt) || {};
+          e.sheet = this;
+          self.emit("sheet." + this.event, e);
         });
-        this.emit("sheet:new", { sheet: sheet });
+        this.emit("sheet.new", { sheet: sheet });
       }
       return sheet;
-    },
-    region: function(name, span) {
+    };
+  
+    def.region = function(name, span) {
       if(arguments.length == 2) {
-        this._data.regions[name] = {
+        this.data.regions[name] = {
           "sheet":span.sheet().name,
           "x":span.x,
           "y":span.y,
@@ -68,13 +76,14 @@ requireCode["./book"] = function(exports) {
         var region = this._regions.hasOwnProperty(name) ? this._regions[name] : null;
         return region;
       }
-      if(this._data.regions.hasOwnProperty(name)) {
-        var data = this._data.regions[name];
+      if(this.data.regions.hasOwnProperty(name)) {
+        var data = this.data.regions[name];
         var sheet = this.sheet(data.sheet, false);
         return this._regions[name] = new Span(sheet,data.x,data.y,data.width,data.height);
       }
       return null;
-    }
+    };
+  
   });
   
   
@@ -82,29 +91,37 @@ requireCode["./book"] = function(exports) {
 requireCode["./cell"] = function(exports) {
   var Scripting = require("./scripting").Scripting;
   var util = require("./util");
+  function isNumeric(v) { return /^\d+(\.\d+)?$/.test(v); };
   
-  exports.CircularDependencyError = util.extend(Error, {
-    type: "#CIRC",
-    init: function() {
+  exports.CircularDependencyError = util.Class(function CircularDependencyError(def) {
+    this.inherit(Error);
+  
+    def.type = "#CIRC";
+    def.constructor = function() {
       this.message = "Circular dependency";
-      Error.prototype.constructor.call(this, this.message);
+      Error.constructor.call(this, this.message);
     }
   });
   
-  exports.Cell = util.Evented.extend({
-    init: function(owner, data, x, y) {
-      if(!data) { data = { } }
+  exports.Cell = util.Class(function Cell(def) {
+    this.inherit(util.Evented);
+  
+    def.constructor = function(owner, data, x, y) {
+      util.Evented.constructor.call(this);
+      if(!data) data = {}
       this.owner = owner;
       this.x = x;
       this.y = y;
       this._data = data;
       this.valid = this._data.value !== undefined || this._data.formula === undefined;
       this._dep = [];
-    },
-    name: function() {
+    };
+  
+    def.name = function() {
       return Scripting.cellName(this.x+1, this.y);
-    },
-    formula: function(formula, value, emit) {
+    };
+  
+    def.formula = function(formula, value, emit) {
       if(arguments.length > 0) {
         if(arguments.length < 3) {
           emit = true;
@@ -123,30 +140,34 @@ requireCode["./cell"] = function(exports) {
         return;
       }
       return this._data.formula;
-    },
-    _clearDependencies: function() {
+    };
+  
+    def._clearDependencies = function() {
       if(!this._dep || !this._dep.length) return;
       for(var i=0, mi=this._dep.length;i<mi;++i) {
         this._dep[i].call && this._dep[i]();
       }
       this._dep = [];
-    },
-    dependency: function(span) {
+    };
+  
+    def.dependency = function(span) {
       this._dep.push(span);
-    },
-    _createDependencies: function() {
+    };
+  
+    def._createDependencies = function() {
       var self = this;
       for(var i=0; i<this._dep.length; ++i) {
         if(!this._dep[i].on) continue;
-        this._dep[i] = this._dep[i].on("cell:changed", function() {
+        this._dep[i] = this._dep[i].on("cell.changed", function() {
           if(!self.valid || self._running) return;
           self.valid = false;
           delete self._data.value;
           self.emit("changed");
         });
       }
-    },
-    value: function(v) {
+    };
+  
+    def.value = function(v) {
       if(arguments.length === 0) {
         return this.valueOf();
       }
@@ -154,8 +175,9 @@ requireCode["./cell"] = function(exports) {
       this.valid = true;
       this._error = null;
       this.emit("changed");
-    },
-    valueOfCached: function() {
+    };
+  
+    def.valueOfCached = function() {
       if(this._error) {
         console && console.error(this._error);
         throw this._error;
@@ -163,13 +185,11 @@ requireCode["./cell"] = function(exports) {
   
       var v = this._data.value;
       if(v === undefined || v === "") return "";
-      if(!this._isNumeric(v)) return v.valueOf();
+      if(!isNumeric(v)) return v.valueOf();
       return Number(v);
-    },
-    _isNumeric: function(v) {
-      return /^\d+(\.\d+)?$/.test(v);
-    },
-    valueOf: function() {
+    };
+  
+    def.valueOf = function() {
       if(this._running) { throw new exports.CircularDependencyError(); }
       this._running = true;
   
@@ -204,7 +224,8 @@ requireCode["./cell"] = function(exports) {
         this._createDependencies();
       }
       return this.valueOfCached();
-    }
+    };
+  
   });
   
   
@@ -569,8 +590,11 @@ requireCode["./sheet"] = function(exports) {
   var Cell = require("./cell").Cell;
   var util = require("./util");
   
-  exports.Sheet = util.Evented.extend({
-    init: function(owner, name, data) {
+  exports.Sheet = util.Class(function Sheet(def) {
+    this.inherit(util.Evented);
+  
+    def.constructor = function(owner, name, data) {
+      util.Evented.constructor.call(this);
       this.name = name;
       this.owner = owner;
       this.grid = new Grid(16384, 1048576, 1024);
@@ -578,15 +602,17 @@ requireCode["./sheet"] = function(exports) {
       if(!this._data.rows) { this._data.rows = {}; }
       this.rows = {};
       this._initData();
-    },
-    _initData: function() {
+    };
+  
+    def._initData = function() {
       for(var rowIndex in this._data.rows) {
         for(var cellIndex in this._data.rows[rowIndex]) {
           this._createCell(Number(cellIndex), Number(rowIndex));
         }
       }
-    },
-    area: function() {
+    };
+  
+    def.area = function() {
       if(!this._data.rows) { return [0,0]; }
       var y = 0, x = 0;
       for(var rowIndex in this._data.rows) {
@@ -596,8 +622,9 @@ requireCode["./sheet"] = function(exports) {
         }
       }
       return [x,y];
-    },
-    _createCell: function(x, y) {
+    };
+  
+    def._createCell = function(x, y) {
       var self = this;
       var dataRow = this._data.rows[y];
       if(!dataRow) {
@@ -615,22 +642,29 @@ requireCode["./sheet"] = function(exports) {
       if(!cell) {
         cell = row[x] = new Cell(this, dataCell, x, y);
         this.grid.add([x,y], cell);
-        cell.on("*", function(evt, sender) {
-          e = util.clone(evt);
-          e.cell = sender;
-          self.emit("cell:" + e.type, e);
-        });
+        this._cell(cell);
       }
       return cell;
-    },
-    sizes: function() {
+    };
+  
+    def._cell = function(cell) {
+      var self = this;
+      cell.onAny(function(evt) {
+        var evt = util.clone(evt) || {};
+        evt.cell = cell;
+        self.emit("cell." + this.event, evt);
+      });
+    };
+  
+    def.sizes = function() {
       var results = this._data.sizes;
       if(results === undefined) {
         results = this._data.sizes = { x: {}, y: {} }
       }
       return results;
-    },
-    meta: function(name, range, value) {
+    };
+  
+    def.meta = function(name, range, value) {
       if(arguments.length < 2) { return this._metaContainer(name); }
       var set = arguments.length > 2;
       if(range instanceof Number) {
@@ -657,15 +691,17 @@ requireCode["./sheet"] = function(exports) {
         results.push(item.value);
       }
       return results;
-    },
-    _metaContainer: function(name, create) {
+    };
+  
+    def._metaContainer = function(name, create) {
       var info = this._data[name];
       if(info === undefined && create !== false) {
         info = this._data[name] = [];
       }
       return info;
-    },
-    cell: function(x, y, create) {
+    };
+  
+    def.cell = function(x, y, create) {
       if(arguments.length < 3) {
         create = true;
       }
@@ -675,15 +711,19 @@ requireCode["./sheet"] = function(exports) {
         return this._createCell(x, y);
       }
       return cell;
-    }
+    };
   });
+  
   
 };
 requireCode["./span"] = function(exports) {
   var util = require("./util");
   
-  exports.Span = util.Evented.extend({
-    init: function(sheet, x, y, width, height) {
+  exports.Span = util.Class(function Span(def) {
+    this.inherit(util.Evented);
+  
+    def.constructor = function(sheet, x, y, width, height) {
+      util.Evented.constructor.call(this);
       this.x = x || 0;
       this.y = y || 0;
       if(arguments.length <= 3) {
@@ -694,16 +734,19 @@ requireCode["./span"] = function(exports) {
         this.height = height || 0;
       }
       this.sheet(sheet);
-    },
-    clone: function() {
+    };
+  
+    def.clone = function() {
       return new exports.Span(this._sheet, this.x, this.y, this.width, this.height);
-    },
-    equalTo: function(other) {
+    };
+  
+    def.equalTo = function(other) {
       return this.sheet() === other.sheet() &&
              this.x === other.x && this.y === other.y &&
              this.width === other.width && this.height === other.height;
-    },
-    data: function(includeSheet) {
+    };
+  
+    def.data = function(includeSheet) {
       var result = {
         x: this.x, y: this.y,
         width: this.width, height: this.height
@@ -712,34 +755,46 @@ requireCode["./span"] = function(exports) {
         result.sheet = this.sheet().name;
       }
       return result;
-    },
-    destroy: function() {
+    };
+  
+    def.destroy = function() {
       if(this._sheetChange) this._sheetChange();
       util.Evented.prototype.destroy.call(this);
       this._sheet = null;
-    },
-    sheet: function(sheet) {
+    };
+  
+    def.sheet = function(sheet) {
       if(arguments.length === 0) return this._sheet;
       if(this._sheet === sheet) return;
       var self = this;
       if(this._sheetChange) this._sheetChange();
       this._sheet = sheet;
-      this._sheetChange = sheet.on("*", function(evt) {
-        if(!evt.cell || !self.contains(evt.cell)) return;
-        self.emit(evt.type, util.clone(evt));
-        if(evt.cell && evt.type == "cell:changed") {
-          self.emit("changed", util.clone(evt));
+  
+     function forward(evt) {
+        var cell = evt && evt.cell;
+        if(!cell || !self.contains(cell)) return;
+        self.emit(this.event, evt);
+        if(this.event == "cell.changed") {
+          self.emit("changed", evt);
         }
-      });
+      }
+  
+      sheet.on("cell.*", forward);
+      this._sheetChange = function() {
+        sheet.off("cell.*", forward);
+      }
+      
       this.emit("location");
       this.emit("changed");
-    },
-    cell: function(x, y, create) {
+    };
+  
+    def.cell = function(x, y, create) {
       if(arguments.length < 3) create = true;
       if(x < 0 || y < 0 || x >= this.width || y >= this.height) { throw new Error("Index outside span."); }
       return this._sheet.cell(x+this.x, y+this.y, create);
-    },
-    containedBy: function(x, y, w, h) {
+    };
+  
+    def.containedBy = function(x, y, w, h) {
       if(arguments.length === 1) {
         var obj = arguments[0];
         x = obj.x;
@@ -752,8 +807,9 @@ requireCode["./span"] = function(exports) {
       if(this.x < y || this.x+this.width > x+w) return false;
       if(this.y < y || this.y+this.height > y+h) return false;
       return true;
-    },
-    contains: function(x, y, w, h) {
+    };
+  
+    def.contains = function(x, y, w, h) {
       if(arguments.length === 1) {
         var obj = arguments[0];
         x = obj.x;
@@ -766,14 +822,16 @@ requireCode["./span"] = function(exports) {
       if(x < this.x || x+w > this.x+this.width) return false;
       if(y < this.y || y+h > this.y+this.height) return false;
       return true;
-    },
-    size: function(w, h) {
+    };
+  
+    def.size = function(w, h) {
       if(arguments.length === 0) {
         return { w: this.width, h: this.height };
       }
       return this.location(this.x, this.y, w, h);
-    },
-    location: function(x, y, w, h) {
+    };
+  
+    def.location = function(x, y, w, h) {
       if(arguments.length === 0) {
         return { x: this.x, y: this.y, width: this.width, height: this.height };
       }
@@ -794,18 +852,22 @@ requireCode["./span"] = function(exports) {
       this.emit("moved");
       this.emit("changed");
       return this;
-    },
-    resizeBy: function(w, h) {
+    };
+  
+    def.resizeBy = function(w, h) {
       return this.location(this.x, this.y, w+this.width, h+this.height);
-    },
-    moveBy: function(x, y) {
+    };
+  
+    def.moveBy = function(x, y) {
       return this.location(x+this.x,y+this.y);
-    },
-    cells: function(sorted) {
+    };
+  
+    def.cells = function(sorted) {
       var grid = this._sheet.grid;
       return this._sheet.grid.between([this.x,this.y], [this.x+this.width,this.y+this.height], sorted);
-    },
-    values: function(sorted) {
+    };
+  
+    def.values = function(sorted) {
       var cells = this.cells(sorted);
       for(var i=cells.length-1; i>=0; --i) {
         var value = cells[i].valueOf();
@@ -816,8 +878,9 @@ requireCode["./span"] = function(exports) {
         cells[i] = value;
       }
       return cells;
-    },
-    valueOf: function(sorted) {
+    };
+  
+    def.valueOf = function(sorted) {
       if(this.width === this.height === 1) {
         var cell = this.cell(0, 0, false);
         var value = cell && cell.valueOf();
@@ -828,14 +891,21 @@ requireCode["./span"] = function(exports) {
         return cells[0];
       }
       return cells;
-    },
-    dimensions: function() { return { x: this.x, y: this.y, width: this.width, height: this.height }; },
-    toString: function() { return this.valueOf(); }
+    };
+  
+    def.dimensions = function() { return { x: this.x, y: this.y, width: this.width, height: this.height }; },
+    def.toString = function() { return this.valueOf(); }
   });
   
 };
 requireCode["./util"] = function(exports) {
+  var global = typeof window === "undefined" ? exports : window;
+  if(global.EventEmitter2 === undefined) {
+    global.EventEmitter2 = require("EventEmitter2").EventEmitter2;
+  }
+  
   exports.clone = function(obj) {
+    if(!obj) return null;
     if(obj.slice) return obj.slice(0);
     var newObject = {};
     for(var key in obj) {
@@ -844,7 +914,7 @@ requireCode["./util"] = function(exports) {
     return newObject;
   }
   
-  exports.merge = function() {
+  var merge = exports.merge = function() {
     var tgt = arguments[0];
     for(var i=1; i<arguments.length; ++i) {
       for(var key in arguments[i]) {
@@ -855,80 +925,103 @@ requireCode["./util"] = function(exports) {
     return tgt;
   }
   
-  exports.extend = function(data) {
-    var parent = this;
-    if(arguments.length === 2) {
-      parent = data;
-      data = arguments[1];
+  
+  
+  if(!Function.prototype.getName) {
+    Function.prototype.getName = function() {
+      if(this.name) return this.name;
+      return this.name = this.toString().match(/^function\s+(.*?)\s*\(/)[1];
+    }
+  }
+  
+  var BaseClass = exports.BaseClass = function BaseClass() { }
+  BaseClass.append = function(fn) {
+    var instance = this.prototype;
+    fn.call(this, instance);
+    merge(this.prototype, instance);
+    return this;
+  }
+  BaseClass.include = function(obj) {
+    merge(this.prototype, obj.prototype);
+    if(obj.included && obj.included.call) obj.included(this);
+  }
+  BaseClass.inherit = function(obj) {
+    if(!(obj instanceof Function)) {
+      throw new Error("Can only inherit from class-like objects.");
     }
   
-    var parentWrapper = function(){};
-    parentWrapper.prototype = parent.prototype;
-    var prototype = new parentWrapper();
-    exports.merge(prototype, data);
+    function base() { }
+    base.prototype = obj.prototype;
+    var prototype = new base();
+    merge(prototype, this.prototype);
+    this.prototype = prototype;
+    this.base = base.prototype;
   
-    var cls = data.init || function(){};
-    cls.constructor = cls;
-    cls.prototype = prototype;
-    cls.base   = parent.prototype;
-    cls.extend = exports.Class.extend;
-    return cls;
-  };
+    if(obj.inherited && obj.inherited.call) obj.inherited(this);
+  }
+  BaseClass.extend = function(obj) {
+    merge(this, obj.prototype);
+    if(obj.extended && obj.extended.call) obj.extended(this);
+  }
   
-  exports.Class = function Class() { }
-  exports.Class.extend = exports.extend;
   
-  exports.SheetError = exports.Class.extend(Error, {
-    init: function(code, msg) {
-      this.code = code;
-      //Error.constructor.call(this, msg);
+  exports.Module = function Module(cb) {
+    var self = {};
+    merge(self, BaseClass);
+    self.inherit(BaseClass);
+    self.inherit = null;
+    self.append(cb);
+    return self;
+  }
+  
+  exports.Class = function Class(cb) {
+    var self = function() { if(this.constructor) this.constructor.apply(this, arguments); }
+    self.className = cb.getName();
+    self.toString = function() { return "[" + self.className + "]" }
+  
+    merge(self, BaseClass);
+    self.inherit(BaseClass);
+    self.append(cb);
+    self.prototype.class = self;
+    self.constructor = self.prototype.constructor;
+    return self;
+  }
+  
+  
+  exports.Evented = exports.Class(function Evented(def) {
+    this.inherit(global.EventEmitter2);
+    
+    def.constructor = function(args) {
+      if(!args) args = {}
+      if(args.wildcard === undefined) args.wildcard = true;
+      global.EventEmitter2.call(this, args);
     }
-  });
   
-  exports.Evented = exports.Class.extend({
-    emit: function(msg, args) {
-      if(!args) { args = {}; }
-      if(msg !== "*") { args.type = msg; }
-      args.sender = this;
+    def.eventProxy = function(fn) {
+      function proxy() {
+        var args = [this.event, this];
+        args.concat(Array.prototype.slice.call(arguments));
+        fn.apply(this, args);
+      };
   
-      var listeners = this._msgs && this._msgs[msg];
-      if(listeners) {
-        var handlers = listeners.slice(0);
-        for(var i=0; i<handlers.length; ++i) {
-          handlers[i].call(this, args, this);
-        };
-      }
-      if(msg !== "*") {
-        this.emit("*", args);
-      }
-    },
-    unbind: function(msg, method) {
-      if(!this._msgs || !this._msgs[msg]) { return; }
-      for(var i=this._msgs[msg].length-1; i>=0; --i) {
-        if(this._msgs[msg][i] === method) {
-          this._msgs[msg].splice(i, 1);
-        }
-      }
-      if(this._msgs[msg].length === 0) {
-        delete this._msgs[msg];
-      }
-    },
-    on: function(msg, method) {
-      var self = this;
-      if(!this._msgs) this._msgs = {};
-      if(!this._msgs[msg]) this._msgs[msg] = [];
-      this._msgs[msg].push(method);
-      return function() { self.unbind(msg, method); }
-    },
-    once: function(msg, method) {
-      var self = this;
-      return this.on(msg, function cb() {
-        self.unbind(msg, cb);
-        method.apply(this, arguments);
-      });
-    },
-    destroy: function() {
-      this._msgs = null;
+      this.onAny(proxy);
+      return function() { this.offAny(proxy); };
+    }
+  
+    def._eventProxy = function(prefix, target) {
+      function proxy() {
+        target.proxyInfo = this.proxyInfo || {};
+        target.proxyInfo[prefix] = this;
+  
+        var name = (prefix ? prefix + (this.delimited || ".") : "") + this.event;
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(name);
+        target.emit.apply(target, args);
+  
+        delete target.proxyInfo;
+      };
+      this.onAny(proxy);
+      return proxy;
     }
   });
   
