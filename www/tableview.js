@@ -447,6 +447,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
 
   // Fills up empty neighbours if a cell is overflowing.
   def.resizeToFit = function(node, dataCell) {
+    var node = node.parentNode;
     var self = this;
     var reset = [];
 
@@ -455,6 +456,8 @@ var TableView = Waffles.util.Class(function TableView(def) {
     var requires = node.scrollWidth - 4;
     var last = $(node).closest("td").removeClass("overflowing overflowing-into overflowing-from");
 
+    console.log(node.childNodes[0].nodeValue);
+
     var needsResizing = w < requires;
     while(w < requires) {
       var nextEm = this.cellAt(dataCell.x + x - this.span.x, dataCell.y - this.span.y)[0];
@@ -462,7 +465,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
 
       var dat = this.dataCell($(nextEm));
       var text = dat ? dat.valueOf() : "";
-      //var text = nextEm.childNodes[0].childNodes[0].childNodes[0];
+      console.log(text);
       
       if(text && /[^\s]/.test(text.nodeValue)) break;
       if(last) last.addClass("overflowing-from");
