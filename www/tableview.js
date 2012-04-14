@@ -609,7 +609,7 @@ var TableView = Waffles.util.Class(function TableView(def) {
 
     var fullWidth = $(this.em).width(), fullHeight = $(this.em).height();
     var mx, currentWidth;
-    for(mx=0, currentWidth=defaultWidth; currentWidth < fullWidth; ++mx) {
+    for(mx=1, currentWidth=defaultWidth; currentWidth < fullWidth; ++mx) {
       currentWidth += (sizes.x[this.span.x + mx] || defaultWidth);
     }
     var my, currentHeight;
