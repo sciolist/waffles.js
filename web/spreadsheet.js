@@ -1,3 +1,73 @@
+function locate(em, add, top) {
+  var result = [0, 0];
+  if(add) {
+    result[0] += em.offsetWidth;
+    result[1] += em.offsetHeight;
+  }
+  while(em && em != top) {
+    result[0] += em.offsetLeft;
+    result[1] += em.offsetTop;
+    em = em.offsetParent;
+  }
+  return result;
+};
+
+
+
+var Highlight = Waffles.util.Class(function Highlight(def) {
+
+  def.constructor = function(spreadsheet, span, element) {
+    this.span = span;
+  };
+
+  def.applyTo = function(spreadsheet, em) {
+    var cells = this.minMax(spreadsheet);
+    $(em).removeClass("hide-left hide-right hide-top hide-bottom");
+    em.className += cells.className;
+    if(!cells.min || !cells.max) {
+      em.style.cssText = "display:none;"
+      return false;
+    }
+    var start = locate(cells.min, false, spreadsheet.em[0]);
+    var end = locate(cells.max, true, spreadsheet.em[0]);
+    em.style.cssText = [
+      "position:absolute",
+      "left:" + (start[0]) + "px",
+      "top:" + (start[1]) + "px",
+      "width:" + (end[0]-start[0]) + "px",
+      "height:" + (end[1]-start[1]) + "px",
+      "display:block"
+    ].join(";");
+      return true;
+  };
+
+  def.minMax = function(spreadsheet) {
+    var span = spreadsheet.span;
+
+    var minX = this.span.x - span.x;
+    var maxX = minX + this.span.width - 1;
+
+    var minY = this.span.y - span.y;
+    var maxY = minY + this.span.height - 1;
+
+    var min = spreadsheet.cellAt(Math.max(0,minX), Math.max(0,minY));
+    var max = spreadsheet.cellAt(Math.min(span.width-2,maxX), Math.min(span.height-2,maxY));
+
+    var className = "";
+    if(minX <  0) className += " hide-left";
+    if(maxX >= span.width) className += " hide-right";
+    if(minY <  0) className += " hide-top";
+    if(maxY >= span.height) className += " hide-bottom";
+
+    return {
+      min: min[0],
+      max: max[0],
+      className: className
+    };
+  };
+
+});
+
 var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
   def.constructor = function(em, book) {
@@ -25,6 +95,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
         Math.abs(self.selectionAt.y - self.selectionFocus.y) + 1
       );
     });
+
     this.selection.on("moved", function() {
       self.scrollToFocus();
       self.updateSelection();
@@ -46,8 +117,16 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     this.createEditInput();
     this.refreshValues();
     this.createSelectionDragger();
-    this.rigMouse();
+    this.selectionSetup();
+    this.selectionHighlight = new Highlight(this, this.selection, this._selection);
     
+    this.table.mousedown(function(e) {
+      e.preventDefault();
+    });
+    this.em.mouseup(function() {
+      self._input.focus();
+    });
+
     setInterval(function() {
       while(self.queue.length) {
         self.queue.pop()();
@@ -143,72 +222,343 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       bar.scroll(self.span.x * 10);
     });
   };
-  
-  
-  
-  def.rigMouse = function() {
-    var isDragging = false;
-    var startCell = null;
-    var self = this;
-    this.table.mousedown(function(e) {
-      e.preventDefault();
-    });
-    this.table.delegate("td[data-x]", "mousedown", function(e) {
-      e.preventDefault();
-      if(isDragging) { return; }
-      isDragging = true;
-      startCell = $(this);
-      self.select(startCell);
-    });
-    $(document.body).mouseup(function(e) {
-      e.preventDefault();
-      isDragging = false;
-    });
-    this.em.mouseup(function() {
-      self._input.focus();
-    });
-    this.table.delegate("td[data-x]", "mouseover", function(e) {
-      if(!isDragging) { return; }
-      self.select(startCell, $(this));
-    });
-    this.table.delegate("td[data-x]", "click", function(e) {
-      self.hideEditInput();
-      self.select.call(self, $(this));
-    });
-    this.table.delegate("td[data-x]", "dblclick", function(e) {
-      self.select.call(self, $(this));
-      self.showEditInput();
-    });
-    
-    if(!jQuery.browser.msie) { return; }
-    this._selection.mousemove(function(e) {
-      if(!isDragging) { return; }
-      var rows = self.table[0].rows;
-      for(var y=0; y<rows.length; ++y) {
-        yAt = $(rows[y]).offset().top;
-        if(e.clientY < yAt || e.clientY >= yAt + rows[y].offsetHeight) {
-          continue;
-        }
-        var cells = rows[y].cells;
-        for(var x=0; x<cells.length; ++x) {          
-          var cell = $(cells[x]);
-          xAt = cell.offset().left;
-          if(e.clientX < xAt || e.clientX >= xAt + cells[y].offsetWidth) {
-            continue;
-          }
-          cell.trigger("mouseover", e);
-        }
-        return;
-      }
-    });
-  };
-  
+
+
+
+
+  // SELECTION BOX
   def.createSelectionDragger = function() {
     this._selection = $("<div>").addClass("selection-wrapper");
     $("<div>").addClass("selection").appendTo(this._selection);
     $("<div>").addClass("drag").appendTo(this._selection);
     this.em.prepend(this._selection);
   };
+  def.selectionRing = function() {
+    if(!this._selection) { return; }
+    this.selectionHighlight.applyTo(this, this._selection[0]);
+  };
+
+  def.select = function(fromCell, toCell) {
+    this.hideEditInput();
+    this.selectionFocus.location(this.getSpanXY(fromCell));
+    if(arguments.length > 1) {
+      this.selectionAt.location(this.getSpanXY(toCell));
+    }
+  };
+
+  def.getSpanXY = function(cell) {
+    if(cell.attr) {
+      return {
+        x: this.span.x + Number(cell.attr("data-x")),
+        y: this.span.y + Number(cell.attr("data-y"))
+      }
+    }
+    return {x: this.span.x + cell.x, y: this.span.y + cell.y };
+  },
+
+  def.selectionSetup = function() {
+    var self = this;
+    var startAt = 0;
+    var mxy = null;
+    var dragTarget = null;
+    var dragMode = null;
+
+    $(document).bind("mouseup", "click", function(e) {
+      dragMode = null;
+    });
+
+    this.table.delegate("td.header-xy", "click", function(e) {
+      var sheet = self.span.sheet();
+      self.selectionFocus.location(self.span.x, self.span.y);
+      self.selection.location(0, 0, sheet.width, sheet.height);
+    });
+
+    // Header X
+    this.table.delegate("td.header-x", "mousedown", function(e) {
+      e.preventDefault();
+      if(dragMode) { return; }
+      self.hideEditInput();
+      dragMode = "header-x";
+
+      var height = self.span.sheet().height;
+      var x = Number($(this).data("header-x")) + self.span.x;
+      self.selectionAt.location(x, self.span.y, 1, 1);
+      self.selectionFocus.location(x, self.span.y, 1, 1);
+      self.selection.location(x, 0, 1, height);
+      startAt = x;
+    });
+    this.table.delegate("td.header-x", "mouseover", function(e) {
+      if(dragMode !== "header-x") { return; }
+
+      e.preventDefault();
+      var height = self.span.sheet().height;
+      var x = Number($(this).data("header-x")) + self.span.x;
+      var width = startAt + 1 - x;
+      if(width <= 0) {
+        width = x + 1 - startAt;
+        x = startAt;
+      }
+      self.selection.location(x, 0, Math.max(1, width), height);
+    });
+    this.table.delegate("td.header-x", "click", function(e) {
+      self.hideEditInput();
+      var height = self.span.sheet().height;
+      var x = Number($(this).data("header-x")) + self.span.x;
+      self.selectionAt.location(x, self.span.y, 1, 1);
+      self.selectionFocus.location(x, self.span.y, 1, 1);
+      self.selection.location(x, 0, 1, height);
+    });
+
+    // Header Y
+    this.table.delegate("td.header-y", "mousedown", function(e) {
+      e.preventDefault();
+      if(dragMode) { return; }
+      self.hideEditInput();
+      dragMode = "header-y";
+
+      var width = self.span.sheet().width;
+      var y = Number($(this).data("header-y")) + self.span.y;
+      self.selectionAt.location(self.span.x, y, 1, 1);
+      self.selectionFocus.location(self.span.x, y, 1, 1);
+      self.selection.location(0, y, width, 1);
+      startAt = y;
+    });
+    this.table.delegate("td.header-y", "mouseover", function(e) {
+      if(dragMode !== "header-y") { return; }
+
+      e.preventDefault();
+      var width = self.span.sheet().width;
+      var y = Number($(this).data("header-y")) + self.span.y;
+      var height = startAt + 1 - y;
+      if(height <= 0) {
+        height =  y - startAt;
+        y = startAt;
+      }
+      self.selection.location(0, y, width, Math.max(1, height));
+    });
+    this.table.delegate("td.header-y", "click", function(e) {
+      self.hideEditInput();
+      var width = self.span.sheet().width;
+      var y = Number($(this).data("header-y")) + self.span.y;
+      self.selection.location(0, y, width, 1);
+    });
+
+
+    // Oh dear lord
+    setInterval(function() {
+      if(!dragMode || !mxy) return;
+
+      var inSheet = $(dragTarget).closest("div.spreadsheet").length > 0;
+      var inCell = $(dragTarget).closest("td.data").length > 0;
+
+      switch(dragMode) {
+        case "cell":
+          if(inSheet) return;
+          self.selectionAt.location(mxy.x + self.span.x, mxy.y + self.span.y);
+          break;
+        case "header-x":
+          if(inSheet && !inCell) return;
+          var height = self.span.sheet().height;
+          var x = Math.max(0, mxy.x + self.span.x);
+
+          self.selectionAt.location(x, 0);
+          var width = Math.abs(self.selectionFocus.x - x) + 1;
+          x = Math.min(x, self.selectionFocus.x);
+          self.selection.location(x, 0, Math.max(1, width), height);
+          break;
+        case "header-y":
+          if(inSheet && !inCell) return;
+          var width = self.span.sheet().width;
+          var y = Math.max(0, mxy.y + self.span.y);
+
+          self.selectionAt.location(0, y);
+          var height = Math.abs(self.selectionFocus.y - y) + 1;
+          y = Math.min(y, self.selectionFocus.y);
+          self.selection.location(0, y, width, Math.max(1, height));
+          break;
+
+      }
+
+    }, 40);
+
+    $(document).mousemove(function(e) {
+      mxy = null;
+      if(!dragMode) return;
+      dragTarget = e.target;
+      var emXY = self.em.offset();
+      var sizes = self.span.sheet().sizes();
+      var mouseX = e.pageX - emXY.left, invX = mouseX < 0;
+      var mouseY = e.pageY - emXY.top, invY = mouseY < 0;
+
+      var dx = -1;
+      while(true) {
+        var w = (sizes[dx + self.span.x] || self.defaultWidth) + 4;
+        mouseX += invX ? w : -w;
+        if(invX ? mouseX > 0 : mouseX < 0) break;
+        dx += invX ? -1 : 1;
+      }
+
+      var dy = -1;
+      while(true) {
+        var h = (sizes[dy + self.span.y] || self.defaultHeight) + 4;
+        mouseY += invY ? h : -h;
+        if(invY ? mouseY > 0 : mouseY < 0) break;
+        dy += invY ? -1 : 1;
+      }
+      mxy = { x: dx, y: dy };
+     });
+
+    // CELLS
+    this.table.delegate("td[data-x]", "mousedown", function(e) {
+      e.preventDefault();
+      if(dragMode) { return; }
+      self.hideEditInput();
+      dragMode = "cell";
+      var x = $(this).data("x"), y = $(this).data("y");
+      self.selectionFocus.location(self.span.x + x, self.span.y + y);
+    });
+    this.table.delegate("td[data-x]", "mouseover", function(e) {
+      if(dragMode !== "cell") { return; }
+      var x = $(this).data("x"), y = $(this).data("y");
+      self.selectionAt.location(self.span.x + x, self.span.y + y);
+    });
+    this.table.delegate("td[data-x]", "click", function(e) {
+      self.hideEditInput();
+      var x = $(this).data("x"), y = $(this).data("y");
+      self.selectionFocus.location(self.span.x + x, self.span.y + y);
+    });
+
+    this.table.delegate("td[data-x]", "dblclick", function(e) {
+      self.select.call(self, $(this));
+      self.showEditInput();
+    });
+  };
+
+
+
+
+
+  // INPUT SETUP
+  def.createEditInput = function() {
+    var self = this;
+    var inputWrapper = this._inputWrapper = $("<div>").addClass("hidden").addClass("input-wrapper").appendTo(this.em);
+    var input = this._input = $("<textarea wrap=off>").addClass("input").appendTo(inputWrapper);
+    var em = input[0];
+
+    input.keyup(function(e) {
+      var isVisible = !inputWrapper.hasClass("hidden");
+      switch(e.which) {
+          case 27:
+            self.hideEditInput(false);
+            if(!isVisible) { self.showEditInput(); }
+            e.preventDefault();
+            break;
+      }
+      if(isVisible) self.fitEditInput();
+    });
+    
+    input.keydown(function(e) {
+      var isVisible = !inputWrapper.hasClass("hidden");
+
+      if(isVisible) {
+        // Runs in edit mode.
+        switch(e.which) {
+          case 37: // L
+            if(e.ctrlKey || (em.selectionStart === 0 && em.selectionEnd === 0)) {
+              self.hideEditInput();
+              self.moveSelection(e.shiftKey, -1, 0);
+            }
+            break;
+          case 39: // R
+            if(e.ctrlKey || (em.selectionStart === em.value.length && em.selectionEnd === em.value.length)) {
+              self.hideEditInput();
+              self.moveSelection(e.shiftKey, 1, 0);
+            }
+            break;          
+          case 38: // U
+            self.hideEditInput();
+            self.moveSelection(e.shiftKey, 0, -1);
+            break;
+          case 40: // D
+            self.hideEditInput();
+            self.moveSelection(e.shiftKey, 0, 1);
+            break;
+          case 13:
+            self.hideEditInput();
+            self.moveSelection(false, 0, e.shiftKey ? -1 : 1);
+            break;
+        }
+        return;
+      }
+
+      // Runs OUTSIDE edit mode.
+      switch(e.which) {
+        case 27:
+        case 16:
+        case 17:
+        case 18: 
+        case 224:
+          break;
+        case 13: // enter
+          if(e.ctrlKey) {
+            self.showEditInput();
+            return;
+          }
+          self.hideEditInput();
+          self.moveSelection(false, 0, e.shiftKey ? -1 : 1);
+          break;
+        case 37: // L
+          self.moveSelection(e.shiftKey, -1, 0);
+          break;
+        case 38: // U
+          self.moveSelection(e.shiftKey, 0, -1);
+          break;
+        case 39: // R
+          self.moveSelection(e.shiftKey, 1, 0);
+          break;
+        case 40: // D
+          self.moveSelection(e.shiftKey, 0, 1);
+          break;
+
+        case 33: // Page up
+          self.moveSelection(e.shiftKey, 0, -self.span.height);
+          break;
+        //case 32: // Space
+        case 34: // Page dn
+          self.moveSelection(e.shiftKey, 0, self.span.height * 2);
+          self.moveSelection(e.shiftKey, 0, -self.span.height);
+          break;
+        case 35:
+          self.moveSelection(e.shiftKey, self.span.width * 2, 0);
+          self.moveSelection(e.shiftKey, -self.span.width, 0);
+          break;
+        case 36:
+          self.moveSelection(e.shiftKey, -self.span.width, 0);
+          break;
+
+        default:
+          self.showEditInput();
+          break;
+      }
+    });
+  };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   def.editInputVisible = function() {
     return !this._inputWrapper.hasClass("hidden");
@@ -315,109 +665,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     this.fitEditInput();
   };
 
-  def.createEditInput = function() {
-    var self = this;
-    var inputWrapper = this._inputWrapper = $("<div>").addClass("hidden").addClass("input-wrapper").appendTo(this.em);
-    var input = this._input = $("<textarea wrap=off>").addClass("input").appendTo(inputWrapper);
-    var em = input[0];
-
-    input.keyup(function(e) {
-      var isVisible = !inputWrapper.hasClass("hidden");
-      switch(e.which) {
-          case 27:
-            self.hideEditInput(false);
-            if(!isVisible) { self.showEditInput(); }
-            e.preventDefault();
-            break;
-      }
-      if(isVisible) self.fitEditInput();
-    });
-    
-    input.keydown(function(e) {
-      var isVisible = !inputWrapper.hasClass("hidden");
-
-      if(isVisible) {
-        // Runs in edit mode.
-        switch(e.which) {
-          case 37: // L
-            if(e.ctrlKey || (em.selectionStart === 0 && em.selectionEnd === 0)) {
-              self.hideEditInput();
-              self.moveSelection(e.shiftKey, -1, 0);
-            }
-            break;
-          case 39: // R
-            if(e.ctrlKey || (em.selectionStart === em.value.length && em.selectionEnd === em.value.length)) {
-              self.hideEditInput();
-              self.moveSelection(e.shiftKey, 1, 0);
-            }
-            break;          
-          case 38: // U
-            self.hideEditInput();
-            self.moveSelection(e.shiftKey, 0, -1);
-            break;
-          case 40: // D
-            self.hideEditInput();
-            self.moveSelection(e.shiftKey, 0, 1);
-            break;
-          case 13:
-            self.hideEditInput();
-            self.moveSelection(false, 0, e.shiftKey ? -1 : 1);
-            break;
-        }
-        return;
-      }
-
-      // Runs OUTSIDE edit mode.
-      switch(e.which) {
-        case 27:
-        case 16:
-        case 17:
-        case 18: 
-        case 224:
-          break;
-        case 13: // enter
-          if(e.ctrlKey) {
-            self.showEditInput();
-            return;
-          }
-          self.hideEditInput();
-          self.moveSelection(false, 0, e.shiftKey ? -1 : 1);
-          break;
-        case 37: // L
-          self.moveSelection(e.shiftKey, -1, 0);
-          break;
-        case 38: // U
-          self.moveSelection(e.shiftKey, 0, -1);
-          break;
-        case 39: // R
-          self.moveSelection(e.shiftKey, 1, 0);
-          break;
-        case 40: // D
-          self.moveSelection(e.shiftKey, 0, 1);
-          break;
-
-        case 33: // Page up
-          self.moveSelection(e.shiftKey, 0, -self.span.height);
-          break;
-        //case 32: // Space
-        case 34: // Page dn
-          self.moveSelection(e.shiftKey, 0, self.span.height * 2);
-          self.moveSelection(e.shiftKey, 0, -self.span.height);
-          break;
-        case 35:
-          self.moveSelection(e.shiftKey, self.span.width * 2, 0);
-          self.moveSelection(e.shiftKey, -self.span.width, 0);
-          break;
-        case 36:
-          self.moveSelection(e.shiftKey, -self.span.width, 0);
-          break;
-
-        default:
-          self.showEditInput();
-          break;
-      }
-    });
-  };
 
   def.assignValue = function(node, dataCell) {
     if(node.length) { node = node[0]; }
@@ -479,38 +726,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     }
   };
 
-  def._locate = function _locate(em, add) {
-    var result = [0, 0];
-    if(add) {
-      result[0] += em.offsetWidth;
-      result[1] += em.offsetHeight;
-    }
-    while(em != this.em[0]) {
-      result[0] += em.offsetLeft;
-      result[1] += em.offsetTop;
-      em = em.offsetParent;
-    }
-    return result;
-  };
-
-  def.selectionRing = function() {
-    if(!this._selection) { return; }
-    var minMax = this.minMaxCellsInSpan(this.selection);
-    if(!minMax[0].length || !minMax[1].length) {
-      this._selection[0].style.cssText = "display:none;"
-      return false;
-    }
-    var start = this._locate(minMax[0][0], false);
-    var end = this._locate(minMax[1][0], true);
-    this._selection[0].style.cssText = [
-      "position:absolute",
-      "left:" + (start[0]) + "px",
-      "top:" + (start[1]) + "px",
-      "width:" + (end[0]-start[0]) + "px",
-      "height:" + (end[1]-start[1]) + "px",
-      "display:block"].join(";");
-    return true;
-  };
 
   def.headersInSpan = function(span) {
     var minX = span.x - this.span.x, maxX = minX + span.width;
@@ -528,16 +743,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     var cellSelector = "td.data:not(:nth-child(n+" + (2+Math.max(0,maxX)) + ")):nth-child(n+" + (2+Math.max(0,minX)) + ")";
     var rowSelector = "tr:not(:nth-child(n+" + (2+Math.max(0,maxY)) + ")):nth-child(n+" + (2+Math.max(0,minY)) + ")";
     return this.table.find(rowSelector + " " + cellSelector);
-  };
-
-  def.minMaxCellsInSpan = function(span) {
-    var minX = span.x - this.span.x, maxX = minX + span.width - 1;
-    var minY = span.y - this.span.y, maxY = minY + span.height - 1;
-    var under = minX < 0 && minY < 0;
-    var over = maxX > this.span.width && maxY > this.span.height;
-    var min = this.cellAt(Math.max(0,minX), Math.max(0,minY));
-    var max = this.cellAt(Math.min(this.span.width-2,maxX), Math.min(this.span.height-2,maxY));
-    return [min, max];
   };
 
   def.cellAt = function(x, y) {
@@ -562,14 +767,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     }
   };
   
-  def.select = function(fromCell, toCell) {
-    this.hideEditInput();
-    this.selectionFocus.location(this.span.x+Number(fromCell.attr("data-x")), this.span.y+Number(fromCell.attr("data-y")));
-    if(arguments.length > 1) {
-      this.selectionAt.location(this.span.x+Number(toCell.attr("data-x")), this.span.y+Number(toCell.attr("data-y")));
-    }
-  };
-
   def.moveSelection = function(resize, x, y) {
     if(resize) {
       this.selectionAt.moveBy(x, y);

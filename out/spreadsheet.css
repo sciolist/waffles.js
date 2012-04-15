@@ -64,6 +64,14 @@
     top: -1px;
     bottom: 0px;
     border: 2px solid #3c78c8; }
+  .spreadsheet .hide-top .selection {
+    border-top: none; }
+  .spreadsheet .hide-left .selection {
+    border-left: none; }
+  .spreadsheet .hide-right .selection {
+    border-right: none; }
+  .spreadsheet .hide-bottom .selection {
+    border-bottom: none; }
   .spreadsheet .selection-wrapper {
     display: none;
     pointer-events: none;
