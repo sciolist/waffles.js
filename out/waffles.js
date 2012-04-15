@@ -625,9 +625,12 @@ requireCode["./sheet"] = function(exports) {
   
     def.constructor = function(owner, name, data) {
       util.Evented.constructor.call(this);
+      this.height = 1048576;
+      this.width = 16384;
+  
       this.name = name;
       this.owner = owner;
-      this.grid = new Grid(16384, 1048576, 1024);
+      this.grid = new Grid(this.width, this.height, 1024);
       this._data = data || {};
       if(!this._data.rows) { this._data.rows = {}; }
       this.rows = {};
