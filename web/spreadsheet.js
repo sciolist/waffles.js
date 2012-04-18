@@ -87,15 +87,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     this.selectionFocus.on("moved", function() {
       self.selectionAt.location(this);
     });
-    this.selectionAt.on("moved", function() {
-      self.selection.location(
-        Math.min(self.selectionAt.x, self.selectionFocus.x),
-        Math.min(self.selectionAt.y, self.selectionFocus.y),
-        Math.abs(self.selectionAt.x - self.selectionFocus.x) + 1,
-        Math.abs(self.selectionAt.y - self.selectionFocus.y) + 1
-      );
-    });
-
     this.selection.on("moved", function() {
       self.scrollToFocus();
       self.updateSelection();
@@ -256,6 +247,16 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     return {x: this.span.x + cell.x, y: this.span.y + cell.y };
   },
 
+  def.selectionRefresh = function() {
+    this.selection.location(
+      Math.min(this.selectionFocus.x , this.selectionAt.x),
+      Math.min(this.selectionFocus.y , this.selectionAt.y),
+      Math.abs(this.selectionFocus.x - this.selectionAt.x) + 1,
+      Math.abs(this.selectionFocus.y - this.selectionAt.y) + 1
+    );
+    this.scrollToFocus();
+  };
+
   def.selectionSetup = function() {
     var self = this;
     var startAt = 0;
@@ -270,7 +271,8 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     this.table.delegate("td.header-xy", "click", function(e) {
       var sheet = self.span.sheet();
       self.selectionFocus.location(self.span.x, self.span.y);
-      self.selection.location(0, 0, sheet.width, sheet.height);
+      self.selectionAt.location(sheet.width, sheet.height);
+      self.selectionRefresh();
     });
 
     // Header X
@@ -282,9 +284,11 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
       var height = self.span.sheet().height;
       var x = Number($(this).data("header-x")) + self.span.x;
+      var width = 1;
+
       self.selectionAt.location(x, self.span.y, 1, 1);
       self.selectionFocus.location(x, self.span.y, 1, 1);
-      self.selection.location(x, 0, 1, height);
+      self.selection.location(x, 0, width, height);
       startAt = x;
     });
     this.table.delegate("td.header-x", "mouseover", function(e) {
@@ -300,14 +304,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       }
       self.selection.location(x, 0, Math.max(1, width), height);
     });
-    this.table.delegate("td.header-x", "click", function(e) {
-      self.hideEditInput();
-      var height = self.span.sheet().height;
-      var x = Number($(this).data("header-x")) + self.span.x;
-      self.selectionAt.location(x, self.span.y, 1, 1);
-      self.selectionFocus.location(x, self.span.y, 1, 1);
-      self.selection.location(x, 0, 1, height);
-    });
 
     // Header Y
     this.table.delegate("td.header-y", "mousedown", function(e) {
@@ -318,9 +314,11 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
       var width = self.span.sheet().width;
       var y = Number($(this).data("header-y")) + self.span.y;
+      var height = 1;
+
       self.selectionAt.location(self.span.x, y, 1, 1);
       self.selectionFocus.location(self.span.x, y, 1, 1);
-      self.selection.location(0, y, width, 1);
+      self.selection.location(0, y, width, height);
       startAt = y;
     });
     this.table.delegate("td.header-y", "mouseover", function(e) {
@@ -336,13 +334,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       }
       self.selection.location(0, y, width, Math.max(1, height));
     });
-    this.table.delegate("td.header-y", "click", function(e) {
-      self.hideEditInput();
-      var width = self.span.sheet().width;
-      var y = Number($(this).data("header-y")) + self.span.y;
-      self.selection.location(0, y, width, 1);
-    });
-
 
     // Oh dear lord
     setInterval(function() {
@@ -355,6 +346,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
         case "cell":
           if(inSheet) return;
           self.selectionAt.location(mxy.x + self.span.x, mxy.y + self.span.y);
+          self.selectionRefresh();
           break;
         case "header-x":
           if(inSheet && !inCell) return;
@@ -365,6 +357,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
           var width = Math.abs(self.selectionFocus.x - x) + 1;
           x = Math.min(x, self.selectionFocus.x);
           self.selection.location(x, 0, Math.max(1, width), height);
+          self.selectionRefresh();
           break;
         case "header-y":
           if(inSheet && !inCell) return;
@@ -375,6 +368,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
           var height = Math.abs(self.selectionFocus.y - y) + 1;
           y = Math.min(y, self.selectionFocus.y);
           self.selection.location(0, y, width, Math.max(1, height));
+          self.selectionRefresh();
           break;
 
       }
@@ -415,17 +409,15 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       self.hideEditInput();
       dragMode = "cell";
       var x = $(this).data("x"), y = $(this).data("y");
-      self.selectionFocus.location(self.span.x + x, self.span.y + y);
+      if(e.shiftKey) self.selectionAt.location(self.span.x + x, self.span.y + y);
+      else self.selectionFocus.location(self.span.x + x, self.span.y + y);
+      self.selectionRefresh();
     });
     this.table.delegate("td[data-x]", "mouseover", function(e) {
       if(dragMode !== "cell") { return; }
       var x = $(this).data("x"), y = $(this).data("y");
       self.selectionAt.location(self.span.x + x, self.span.y + y);
-    });
-    this.table.delegate("td[data-x]", "click", function(e) {
-      self.hideEditInput();
-      var x = $(this).data("x"), y = $(this).data("y");
-      self.selectionFocus.location(self.span.x + x, self.span.y + y);
+      self.selectionRefresh();
     });
 
     this.table.delegate("td[data-x]", "dblclick", function(e) {
@@ -567,38 +559,11 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
   def.scrollToFocus = function() {
     this._scrollToFocus = true;
     var dx = 0, dy = 0;
-
-    if(this.selectionAt.y < this.span.y) {
-      dy = this.selectionAt.y - this.span.y;
-    } else {
-      var ry = this.defaultHeight, max = this.em.height(), sheet = this.span.sheet();
-      var sizes = sheet.sizes();
-      for(var y=this.span.y; y<=this.selectionAt.y; ++y) {
-        ry += (sizes.y[y] || this.defaultHeight + 3);
-        if(ry >= max) {
-          dy = this.selectionAt.y - y + 1;
-          break;
-        }
-      }
-    }
-
-    if(this.selectionAt.x < this.span.x) {
-      dx = this.selectionAt.x - this.span.x;
-    } else {
-      var rx = this.defaultWidth, max = this.em.width(), sheet = this.span.sheet();
-      var sizes = sheet.sizes();
-      for(var x=this.span.x; x<=this.selectionAt.x; ++x) {
-        if(rx < max) rx += (sizes.x[x] || this.defaultWidth + 3);
-        if(rx >= max) {
-          dx = this.selectionAt.x - x + 1;
-          break;
-        }
-      }
-    }
-
-    if(dx !== 0 || dy !== 0) {
-      this.span.moveBy(dx, dy);
-    }
+    dx = this.selectionAt.x - this.span.x;
+    dy = this.selectionAt.y - this.span.y;
+    if(dx > 0) dx -= dx >  this.span.width  - 2 ? this.span.width  - 2 : dx;
+    if(dy > 0) dy -= dy >= this.span.height - 2 ? this.span.height - 2 : dy;
+    this.span.moveBy(dx, dy);
     this._scrollToFocus = false;
   };
 
@@ -629,7 +594,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
     var w = cell.outerWidth();
     var requires = this._input[0].scrollWidth - 2;
-    var maxX = this.span.x + this.span.width - 3;
+    var maxX = this.span.x + this.span.width - 1;
     var x = 1;
 
     if(requires > this._input.width()) {
@@ -716,7 +681,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       last = $(nextEm).closest("td");
       last.addClass("overflowing-into");
       last.addClass("overflowing");
-      w += nextEm.clientWidth;
+      w += nextEm.clientWidth + 2;
       x += 1;
     }
 
@@ -727,22 +692,40 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
   };
 
 
-  def.headersInSpan = function(span) {
-    var minX = span.x - this.span.x, maxX = minX + span.width;
-    var minY = span.y - this.span.y, maxY = minY + span.height;
-    if(minX < 0 && minY < 0 && maxX < 0 && maxY < 0) { return $([]); }
-    var cellSelector = "td.header-x:not(:nth-child(n+" + (2+Math.max(0,maxX)) + ")):nth-child(n+" + (2+Math.max(0,minX)) + ")";
-    var rowSelector = "tr:not(:nth-child(n+" + (2+Math.max(0,maxY)) + ")):nth-child(n+" + (2+Math.max(0,minY)) + ") td.header-y";
-    return this.table.find(rowSelector + ", " + cellSelector);
+  def.headersInSpan = function headersInSpan(span) {
+    var result = [];
+    var tbl = this.table[0];
+    var minY = span.y - this.span.y + 1;
+    var maxY = minY + Math.min(this.span.height, span.height);
+    var minX = span.x - this.span.x + 1;
+    var maxX = minX + Math.min(this.span.width, span.width);
+    for(var y=minY; y<maxY; ++y) {
+      var em = tbl.rows[y];
+      if(y > 0 && em) result.push(em.cells[0]);
+    }
+    for(var x=minX; x<maxX; ++x) {
+      var em = tbl.rows[0].cells[x];
+      if(x > 0 && em) result.push(em);
+    }
+    return $(result);
   };
 
-  def.cellsInSpan = function(span) {
-    var minX = span.x - this.span.x, maxX = minX + span.width;
-    var minY = span.y - this.span.y, maxY = minY + span.height;
-    if(minX < 0 && minY < 0 && maxX < 0 && maxY < 0) { return $([]); }
-    var cellSelector = "td.data:not(:nth-child(n+" + (2+Math.max(0,maxX)) + ")):nth-child(n+" + (2+Math.max(0,minX)) + ")";
-    var rowSelector = "tr:not(:nth-child(n+" + (2+Math.max(0,maxY)) + ")):nth-child(n+" + (2+Math.max(0,minY)) + ")";
-    return this.table.find(rowSelector + " " + cellSelector);
+  def.cellsInSpan = function cellsInSpan(span) {
+    var result = [];
+    var tbl = this.table[0];
+    var minY = span.y - this.span.y + 1;
+    var maxY = minY + Math.min(this.span.height, span.height);
+    var minX = span.x - this.span.x + 1;
+    var maxX = minX + Math.min(this.span.width, span.width);
+    for(var y=minY; y<maxY; ++y) {
+      var em = tbl.rows[y];
+      if(!em) continue;
+      for(var x=minX; x<maxX; ++x) {
+        em = em.cells[x];
+        if(x > 0 && em) result.push(em);
+      }
+    }
+    return $(result);
   };
 
   def.cellAt = function(x, y) {
@@ -773,6 +756,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     } else {
       this.selectionFocus.moveBy(x, y);
     }
+    this.selectionRefresh();
   };
 
   def.defaultWidth = 80;
@@ -809,12 +793,12 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
     var fullWidth = $(this.em).width(), fullHeight = $(this.em).height();
     var mx, currentWidth;
-    for(mx=1, currentWidth=defaultWidth; currentWidth < fullWidth; ++mx) {
+    for(mx=0, currentWidth=defaultWidth; currentWidth < fullWidth; ++mx) {
       currentWidth += (sizes.x[this.span.x + mx] || defaultWidth);
     }
     var my, currentHeight;
     for(my=0, currentHeight=defaultHeight; currentHeight < fullHeight; ++my) {
-      currentHeight += sizes.y[this.span.y + my] || defaultHeight;
+      currentHeight += (sizes.y[this.span.y + my] || defaultHeight) + 4;
     }
     if(this.span.width != mx || this.span.height != my) {
       this.span.size(mx, my);
@@ -824,22 +808,22 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     if(this._refreshCache && this._refreshCache.equalTo(this.span)) return;
     this._refreshCache = Waffles.util.clone(this.span);
     tbl.width(currentWidth);
-    for(var y=my; ; ++y) {
+    for(var y=my+1; ; ++y) {
       var row = tblEm.rows[y];
       if(!row) break;
       try { tblEm.removeChild(row); } catch(e) { }
     }
 
-    for(var y=0; y<my; ++y) {
+    for(var y=0; y<=my; ++y) {
       var row = tblEm.rows[y] || $("<tr>").appendTo(tbl)[0];
 
-      for(var x=mx; ;++x) {
+      for(var x=mx+1; ;++x) {
         var cell = row.cells[x];
         if(!cell) break;
         row.removeChild(cell);
       }
       
-      for(var x=0; x<mx; ++x) {
+      for(var x=0; x<=mx; ++x) {
         var cell = row.cells[x];
         var newCell = !cell;
 
