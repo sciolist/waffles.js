@@ -67,19 +67,17 @@
     },
     
     _onWheel: function(e) {
+      var evt = e.originalEvent;
       e.preventDefault();
-      if(e.originalEvent.axis && this.opts.axis !== -1) {
-        if(this.opts.axis !== e.originalEvent.axis) return;
+      var delta = -(evt["wheelDelta" + (this.opts.axis == 2 ? "Y" : "X")] / 100);
+      if(!delta && evt.axis === this.opts.axis) {
+        if(!delta) delta = (-evt.deltaWheel/5);
+        if(!delta) delta = (evt.detail) / 5;
       }
-      else if(this.opts.axis == 1) return;
+      if(!delta) return;
 
-      e = e.originalEvent;
       var dir = this.scrollDirection();
-      var dy = e.detail || 0;
-      if(!dy) dy = -(e.deltaWheel/2);
-      if(!dy) dy = -(e.wheelDelta/100);
-      
-      jQuery(this._em)[dir](jQuery(this._em)[dir]() + (dy * 10));
+      jQuery(this._em)[dir](jQuery(this._em)[dir]() + (delta * 10));
     },
     
     _init_em: function() {
