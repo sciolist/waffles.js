@@ -14,7 +14,8 @@
     border-spacing: 0;
     cursor: default;
   }
-  td {
+  td, th {
+    font-weight: normal;
     border: 1px solid #DDDDDD;
     white-space: pre-wrap;
     div {
@@ -28,7 +29,7 @@
   .xscroll, .yscroll { z-index: 100; }
   
   // data cells
-  td.data.selected div {
+  td.selected div {
     position: relative;
     z-index: 9;
     background: #FFFFFF;
@@ -40,28 +41,28 @@
     z-index: 10;
     overflow: inherit;
   }
-  td.data div div {
+  td div div {
     overflow: hidden;
   }
-  td.data.error div {
+  td.error div {
     color: #880000;
     background: #FFCCCC;
   }
 
   // left and right headers
-  .header.header-y, .header.header-xy {
+  th.y, th.xy {
     border-left: none;
   }
-  .header.header-x, .header.header-xy {
+  th.x, th.xy {
     border-top: none;
   }
-  .header.selected {
+  th.selected {
     color: #dadada;
     background-color: #626262;
     box-shadow: inset 0 1px 4px #444444;
     text-shadow: none;
   }
-  .header {
+  th {
     font-family: verdana;
     text-align: center;
     background: #dadada;

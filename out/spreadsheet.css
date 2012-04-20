@@ -12,17 +12,18 @@
     position: absolute;
     border-spacing: 0;
     cursor: default; }
-  .spreadsheet td {
+  .spreadsheet td, .spreadsheet th {
+    font-weight: normal;
     border: 1px solid #DDDDDD;
     white-space: pre-wrap; }
-    .spreadsheet td div {
+    .spreadsheet td div, .spreadsheet th div {
       white-space: nowrap;
       pointer-events: none; }
   .spreadsheet .scroll-corner {
     z-index: 110; }
   .spreadsheet .xscroll, .spreadsheet .yscroll {
     z-index: 100; }
-  .spreadsheet td.data.selected div {
+  .spreadsheet td.selected div {
     position: relative;
     z-index: 9;
     background: #FFFFFF; }
@@ -34,21 +35,21 @@
     position: relative;
     z-index: 10;
     overflow: inherit; }
-  .spreadsheet td.data div div {
+  .spreadsheet td div div {
     overflow: hidden; }
-  .spreadsheet td.data.error div {
+  .spreadsheet td.error div {
     color: #880000;
     background: #FFCCCC; }
-  .spreadsheet .header.header-y, .spreadsheet .header.header-xy {
+  .spreadsheet th.y, .spreadsheet th.xy {
     border-left: none; }
-  .spreadsheet .header.header-x, .spreadsheet .header.header-xy {
+  .spreadsheet th.x, .spreadsheet th.xy {
     border-top: none; }
-  .spreadsheet .header.selected {
+  .spreadsheet th.selected {
     color: #dadada;
     background-color: #626262;
     box-shadow: inset 0 1px 4px #444444;
     text-shadow: none; }
-  .spreadsheet .header {
+  .spreadsheet th {
     font-family: verdana;
     text-align: center;
     background: #dadada;

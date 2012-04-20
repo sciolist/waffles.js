@@ -240,8 +240,8 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
   def.getSpanXY = function(cell) {
     if(cell.attr) {
       return {
-        x: this.span.x + Number(cell.attr("data-x")),
-        y: this.span.y + Number(cell.attr("data-y"))
+        x: this.span.x + Number(cell[0]["data-x"]),
+        y: this.span.y + Number(cell[0]["data-y"])
       }
     }
     return {x: this.span.x + cell.x, y: this.span.y + cell.y };
@@ -268,7 +268,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       dragMode = null;
     });
 
-    this.table.delegate("td.header-xy", "click", function(e) {
+    this.table.delegate("th.xy", "click", function(e) {
       var sheet = self.span.sheet();
       self.selectionFocus.location(self.span.x, self.span.y);
       self.selectionAt.location(sheet.width, sheet.height);
@@ -276,14 +276,14 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     });
 
     // Header X
-    this.table.delegate("td.header-x", "mousedown", function(e) {
+    this.table.delegate("th.x", "mousedown", function(e) {
       e.preventDefault();
       if(dragMode) { return; }
       self.hideEditInput();
       dragMode = "header-x";
 
       var height = self.span.sheet().height;
-      var x = Number($(this).data("header-x")) + self.span.x;
+      var x = Number(this["head-x"]) + self.span.x;
       var width = 1;
 
       self.selectionAt.location(x, self.span.y, 1, 1);
@@ -291,12 +291,12 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       self.selection.location(x, 0, width, height);
       startAt = x;
     });
-    this.table.delegate("td.header-x", "mouseover", function(e) {
+    this.table.delegate("th.x", "mouseover", function(e) {
       if(dragMode !== "header-x") { return; }
 
       e.preventDefault();
       var height = self.span.sheet().height;
-      var x = Number($(this).data("header-x")) + self.span.x;
+      var x = Number(this["head-x"]) + self.span.x;
       var width = startAt + 1 - x;
       if(width <= 0) {
         width = x + 1 - startAt;
@@ -306,14 +306,14 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     });
 
     // Header Y
-    this.table.delegate("td.header-y", "mousedown", function(e) {
+    this.table.delegate("th.y", "mousedown", function(e) {
       e.preventDefault();
       if(dragMode) { return; }
       self.hideEditInput();
       dragMode = "header-y";
 
       var width = self.span.sheet().width;
-      var y = Number($(this).data("header-y")) + self.span.y;
+      var y = Number(this["head-y"]) + self.span.y;
       var height = 1;
 
       self.selectionAt.location(self.span.x, y, 1, 1);
@@ -321,12 +321,12 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       self.selection.location(0, y, width, height);
       startAt = y;
     });
-    this.table.delegate("td.header-y", "mouseover", function(e) {
+    this.table.delegate("th.y", "mouseover", function(e) {
       if(dragMode !== "header-y") { return; }
 
       e.preventDefault();
       var width = self.span.sheet().width;
-      var y = Number($(this).data("header-y")) + self.span.y;
+      var y = Number(this["head-y"]) + self.span.y;
       var height = startAt + 1 - y;
       if(height <= 0) {
         height =  y - startAt;
@@ -340,7 +340,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       if(!dragMode || !mxy) return;
 
       var inSheet = $(dragTarget).closest("div.spreadsheet").length > 0;
-      var inCell = $(dragTarget).closest("td.data").length > 0;
+      var inCell = $(dragTarget).closest("tr").length > 0;
 
       switch(dragMode) {
         case "cell":
@@ -403,24 +403,24 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
      });
 
     // CELLS
-    this.table.delegate("td[data-x]", "mousedown", function(e) {
+    this.table.delegate("td", "mousedown", function(e) {
       e.preventDefault();
       if(dragMode) { return; }
       self.hideEditInput();
       dragMode = "cell";
-      var x = $(this).data("x"), y = $(this).data("y");
+      var x = this["data-x"], y = this["data-y"];
       if(e.shiftKey) self.selectionAt.location(self.span.x + x, self.span.y + y);
       else self.selectionFocus.location(self.span.x + x, self.span.y + y);
       self.selectionRefresh();
     });
-    this.table.delegate("td[data-x]", "mouseover", function(e) {
+    this.table.delegate("td", "mouseover", function(e) {
       if(dragMode !== "cell") { return; }
-      var x = $(this).data("x"), y = $(this).data("y");
+      var x = this["data-x"], y = this["data-y"];
       self.selectionAt.location(self.span.x + x, self.span.y + y);
       self.selectionRefresh();
     });
 
-    this.table.delegate("td[data-x]", "dblclick", function(e) {
+    this.table.delegate("td", "dblclick", function(e) {
       self.select.call(self, $(this));
       self.showEditInput();
     });
@@ -568,9 +568,9 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
   };
 
   def.dataCell = function(cell, create) {
-    var x = Number(cell.x||cell.attr("data-x"));
+    var x = Number(cell.x||cell[0]["data-x"]);
     if(x == null) { return; }
-    var y = Number(cell.y||cell.attr("data-y"));
+    var y = Number(cell.y||cell[0]["data-y"]);
     return this.span.cell(x, y, !!create);
   };
 
@@ -633,16 +633,16 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
   def.assignValue = function(node, dataCell) {
     if(node.length) { node = node[0]; }
-    if(node.nodeName == "TD") { node = node.childNodes[0].childNodes[0].childNodes[0]; }
+    if(node.nodeName[0]!=="T") { node = node.childNodes[0].childNodes[0].childNodes[0]; }
     var td = node.parentNode.parentNode.parentNode;
-    $(td).removeClass("error");
+    if(td.className.indexOf("error")>-1) td.className="";
 
     var value;
     try {
       value = dataCell ? dataCell.valueOf() : "";
       if(value === undefined) { value = ""; }
     } catch(e) {
-      $(td).addClass("error");
+      td.className += " error";
       value = this.getErrorMessage(e);
     }
     if(node.nodeValue !== value) {
@@ -696,14 +696,14 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     var result = [];
     var tbl = this.table[0];
     var minY = span.y - this.span.y + 1;
-    var maxY = minY + Math.min(this.span.height, span.height);
+    var maxY = minY + span.height;
     var minX = span.x - this.span.x + 1;
-    var maxX = minX + Math.min(this.span.width, span.width);
-    for(var y=minY; y<maxY; ++y) {
+    var maxX = minX + span.width;
+    for(var y=Math.max(0, minY), my=Math.min(maxY, this.span.height); y<my; ++y) {
       var em = tbl.rows[y];
       if(y > 0 && em) result.push(em.cells[0]);
     }
-    for(var x=minX; x<maxX; ++x) {
+    for(var x=Math.max(0, minX), mx=Math.min(maxX, this.span.width); x<maxX; ++x) {
       var em = tbl.rows[0].cells[x];
       if(x > 0 && em) result.push(em);
     }
@@ -760,7 +760,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
   };
 
   def.defaultWidth = 80;
-  def.defaultHeight = 23;
+  def.defaultHeight = 26;
 
   def.refreshInnerValues = function refreshInnerValues() {
     var cells = this.span.cells();
@@ -774,7 +774,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       var row = table.rows[y];
       for(var x=row.cells.length-1; x>=1; --x) {
         var cell = row.cells[x];
-        cell.className = "data";
         var dataCell = cellMap[(y - 1) * this.span.width + (x - 1)];
         this.assignValue(cell, dataCell);
       }
@@ -785,13 +784,14 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     if(!this.table) {
       this.table = $("<table>").appendTo(this.em);
     }
+
     var self = this;
     var defaultWidth = this.defaultWidth;
     var defaultHeight = this.defaultHeight;
     var tbl = this.table, tblEm = tbl[0];
     var sizes = this.span.sheet().sizes();
 
-    var fullWidth = $(this.em).width(), fullHeight = $(this.em).height();
+    var fullWidth = this.em[0].offsetWidth, fullHeight = this.em[0].offsetHeight;
     var mx, currentWidth;
     for(mx=0, currentWidth=defaultWidth; currentWidth < fullWidth; ++mx) {
       currentWidth += (sizes.x[this.span.x + mx] || defaultWidth);
@@ -807,6 +807,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     
     if(this._refreshCache && this._refreshCache.equalTo(this.span)) return;
     this._refreshCache = Waffles.util.clone(this.span);
+
     tbl.width(currentWidth);
     for(var y=my+1; ; ++y) {
       var row = tblEm.rows[y];
@@ -816,65 +817,74 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
     for(var y=0; y<=my; ++y) {
       var row = tblEm.rows[y] || $("<tr>").appendTo(tbl)[0];
+      var rowHeight = (sizes.y[this.span.y + y - 1] || defaultHeight) + "px";
 
       for(var x=mx+1; ;++x) {
         var cell = row.cells[x];
         if(!cell) break;
         row.removeChild(cell);
       }
-      
+
       for(var x=0; x<=mx; ++x) {
+        var cellWidth = (sizes.x[this.span.x + x - 1] || defaultWidth) + "px"
         var cell = row.cells[x];
         var newCell = !cell;
 
         if(newCell) {
-          cell = $("<td>").appendTo(row)[0];
+          cell = $(x === 0 || y === 0 ? "<th>" : "<td>").appendTo(row)[0];
           var text = document.createElement("div");
           text.appendChild(document.createTextNode(""));
 
           var wrapper = document.createElement("div");
           wrapper.appendChild(text);
           cell.appendChild(wrapper);
-          // cell.style.height = (sizes.y[this.span.y + y-1] || defaultHeight) + "px";
-        }
-
-        var wrapper = cell.childNodes[0];
-        var text = wrapper.childNodes[0];
-        cell.style.height = (sizes.y[this.span.y + y-1] || defaultHeight) + "px";
-        cell.style.width  = (sizes.x[this.span.x + x-1] || defaultWidth) + "px";
         
-        if(x === 0 && y === 0) {
-          // TOP LEFT HEADER
-          cell.className = "header header-xy";
-          cell.style.height = defaultHeight + "px";
-          cell.style.width = defaultWidth + "px";
+          if(x === 0 && y === 0) {
+            // TOP LEFT HEADER
+            cell.className = "xy";
+            cell.style.height = defaultHeight + "px";
+            cell.style.width = defaultWidth + "px";
+          } else if(x === 0) {
+            // LEFT HEADER
+            cell.className = "y";
+            cell.setAttribute("data-header-y", y-1);
+            cell["head-y"] = y - 1;
+            cell.style.width = defaultWidth + "px";
+          } else if(y === 0) {
+            // TOP HEADER
+            cell.className = "x";
+            cell["head-x"] = x - 1;
+            cell.style.height = defaultHeight + "px";
+          } else {
+            cell["data-x"] = x - 1;
+            cell["data-y"] = y - 1;
+          }
 
-        } else if(x === 0) {
-          // LEFT HEADER
-          cell.className = "header header-y header-y" + (y - 1);
-          cell.setAttribute("data-header-y", y-1);
-          text.childNodes[0].nodeValue = this.span.y + y;
-          cell.style.width = defaultWidth + "px";
-
-
-        } else if(y === 0) {
-          // TOP HEADER
-          cell.className = "header header-x header-x" + (x - 1);
-          cell.setAttribute("data-header-x", x-1);
-          text.childNodes[0].nodeValue = Waffles.Scripting.columnName(this.span.x+x);
-          cell.style.height = defaultHeight + "px";
-          
-
-        } else {
-          // VALUE COLUMN
-          cell.setAttribute("data-x", x-1);
-          cell.setAttribute("data-y", y-1);
-          cell.className = "data";
+          cell.childNodes[0].style.width = cell.style.width;
+          cell.childNodes[0].style.height = cell.style.height;
+          cell.childNodes[0].style.lineHeight = cell.style.height;
         }
 
-        wrapper.style.height = cell.style.height;
-        wrapper.style.width = cell.style.width;
-        wrapper.style.lineHeight = cell.style.height;
+        var text = cell.childNodes[0].childNodes[0].childNodes[0];
+        if(x === 0 && y === 0) continue;
+        var newValue = "";
+
+        if(x === 0) {
+          newValue = this.span.y + y;
+          cell.style.height = rowHeight;
+        } else if(y === 0) {
+          newValue = Waffles.Scripting.columnName(this.span.x+x);
+          cell.style.width = cellWidth;
+        } else {
+          cell.style.width = cellWidth;
+          cell.style.height = rowHeight;
+        }
+
+        if(text.nodeValue !== newValue) text.nodeValue = newValue;
+        if(cell.childNodes[0].style.width !== cell.style.width) cell.childNodes[0].style.width = cell.style.width;
+        if(cell.childNodes[0].style.height !== cell.style.height) {
+          cell.childNodes[0].style.lineHeight = cell.childNodes[0].style.height = cell.style.height;
+        }
       }
     }
     this.refreshInnerValues();
