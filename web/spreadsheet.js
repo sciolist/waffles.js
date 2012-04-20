@@ -87,15 +87,14 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     this.selectionFocus.on("moved", function() {
       self.selectionAt.location(this);
     });
-    this.selection.on("moved", function() {
+    this.selection.on("changed", function() {
       self.scrollToFocus();
       self.updateSelection();
     });
     this.span.on("moved", function() {
       self.hideEditInput();
-      self.refreshValues();
+      refreshValues = true;
     });
-
     this.span.on("cell.changed", function(e) {
       var span = this;
       self.queue.push(function() { refreshInnerValues = true; });
@@ -116,7 +115,11 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       self._input.focus();
     });
 
+    var refreshValues = false;
+    var refreshInnerValues = false;
     setInterval(function() {
+      if(refreshValues) { self.refreshValues(); refreshValues = refreshInnerValues = false; }
+      if(refreshInnerValues) { self.refreshInnerValues(); refreshInnerValues = false; }
       while(self.queue.length) {
         self.queue.pop()();
       }
@@ -126,8 +129,10 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       $(em).prepend(self._table)
       $(window).bind("resize", function() {
         self.refreshValues();
+        self.updateSelection();
       });
       self.updateSelection();
+      self.refreshValues();
     });
   };
 
@@ -140,22 +145,25 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     var updatingMove = false;
     
     function refreshSize(value) {
-      var loc = Math.max(((value||0) + self.span.height), self.span.sheet().area()[1])|0;
-      bar.opts.currentMax = loc + 1;
+      var area = self.span.sheet().area();
+      var max1 = value + self.span.height;
+      var max2 = area[1];
+      bar.opts.currentMax = (Math.max(max1, max2)+10)|0;
       bar.scroll();
     }
-    
+
     var bar = new ScrollBar(this.em, {
       delegate: true,
       axis: 2,
       min: 0,
       scale: 1,
-      max: area[1],
+      max: area[1] + self.span.height,
       step: 1,
       scroll: function(value) {
-        var value = this.value();
-        refreshSize(value);
+        if(isScrolling) return;
         isScrolling = true;
+        var value = bar.value()|0;
+        refreshSize(value);
         self.span.location(self.span.x, value);
         isScrolling = false;
       }
@@ -169,8 +177,12 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     
     this.span.on("moved", function() {
       if(isScrolling) { return; }
-      bar.scroll(self.span.y*10);
+      isScrolling = true;
+      bar.scroll(self.span.y * 10);
+      refreshSize(bar.value());
+      isScrolling = false;
     });
+    
   },
   
   def.createHorizontalScroll = function() {
@@ -180,8 +192,10 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     var updatingMove = false;
     
     function refreshSize(value) {
-      var loc = Math.max(((value||0) + self.span.width), self.span.sheet().area()[0])|0;
-      bar.opts.currentMax = loc + 1;
+      var area = self.span.sheet().area();
+      var max1 = value + self.span.width;
+      var max2 = area[0];
+      bar.opts.currentMax = (Math.max(max1, max2)+10)|0;
       bar.scroll();
     }
     
@@ -194,9 +208,10 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       max: area[0],
       step: 1,
       scroll: function(value) {
+        if(isScrolling) return;
+        isScrolling = true;
         var value = this.value();
         refreshSize(value);
-        isScrolling = true;
         self.span.location(value, self.span.y);
         isScrolling = false;
       }
@@ -210,7 +225,10 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     
     this.span.on("moved", function() {
       if(isScrolling) { return; }
+      isScrolling = true;
       bar.scroll(self.span.x * 10);
+      refreshSize(bar.value());
+      isScrolling = false;
     });
   };
 
@@ -512,19 +530,17 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
           self.moveSelection(e.shiftKey, 0, 1);
           break;
 
-        case 33: // Page up
+        case 32: // Space
+        case 33: // PgUp
           self.moveSelection(e.shiftKey, 0, -self.span.height);
           break;
-        //case 32: // Space
-        case 34: // Page dn
-          self.moveSelection(e.shiftKey, 0, self.span.height * 2);
-          self.moveSelection(e.shiftKey, 0, -self.span.height);
+        case 34: // PgDn
+          self.moveSelection(e.shiftKey, 0, self.span.height);
           break;
-        case 35:
-          self.moveSelection(e.shiftKey, self.span.width * 2, 0);
-          self.moveSelection(e.shiftKey, -self.span.width, 0);
+        case 35: // End
+          self.moveSelection(e.shiftKey, self.span.width, 0);
           break;
-        case 36:
+        case 36: // Home
           self.moveSelection(e.shiftKey, -self.span.width, 0);
           break;
 
@@ -561,8 +577,8 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     var dx = 0, dy = 0;
     dx = this.selectionAt.x - this.span.x;
     dy = this.selectionAt.y - this.span.y;
-    if(dx > 0) dx -= dx >  this.span.width  - 2 ? this.span.width  - 2 : dx;
-    if(dy > 0) dy -= dy >= this.span.height - 2 ? this.span.height - 2 : dy;
+    if(dx > 0) dx -= dx >= this.span.width  - 3 ? this.span.width  - 3 : dx;
+    if(dy > 0) dy -= dy >= this.span.height - 3 ? this.span.height - 3 : dy;
     this.span.moveBy(dx, dy);
     this._scrollToFocus = false;
   };
