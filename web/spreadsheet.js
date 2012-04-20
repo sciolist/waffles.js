@@ -606,7 +606,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
   def.fitEditInput = function() {
     var sel = this.selectionFocus;
-    var cell = this.cellAt(sel.x, sel.y);
+    var cell = this.cellAt(sel.x - this.span.x, sel.y - this.span.y);
 
     var w = cell.outerWidth();
     var requires = this._input[0].scrollWidth - 2;
@@ -615,7 +615,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
     if(requires > this._input.width()) {
       while(w < requires) {
-        var cell = this.cellAt(x + sel.x - this.span.x, sel.y);
+        var cell = this.cellAt(x + sel.x - this.span.x, sel.y - this.span.y);
         if(!cell || sel.x + x >= maxX) break;
 
         w += cell.outerWidth();
