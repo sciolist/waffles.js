@@ -704,7 +704,8 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       if(y > 0 && em) result.push(em.cells[0]);
     }
     for(var x=Math.max(0, minX), mx=Math.min(maxX, this.span.width); x<maxX; ++x) {
-      var em = tbl.rows[0].cells[x];
+      var row = tbl.rows[0];
+      var em = row ? row.cells[x] : null;
       if(x > 0 && em) result.push(em);
     }
     return $(result);
@@ -764,9 +765,9 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
   def.refreshInnerValues = function refreshInnerValues() {
     var cells = this.span.cells();
-    var cellMap = [];
+    var cellMap = {};
     for(var i=0; i<cells.length; ++i) {
-      cellMap[(cells[i].y - this.span.y) * this.span.width + cells[i].x - this.span.x] = cells[i];
+      cellMap[(cells[i].y) + "_" + (cells[i].x)] = cells[i];
     }
     
     var table = this.table[0];
@@ -774,7 +775,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       var row = table.rows[y];
       for(var x=row.cells.length-1; x>=1; --x) {
         var cell = row.cells[x];
-        var dataCell = cellMap[(y - 1) * this.span.width + (x - 1)];
+        var dataCell = cellMap[(y + this.span.y - 1) + "_" + (x + this.span.x - 1)];
         this.assignValue(cell, dataCell);
       }
     }
