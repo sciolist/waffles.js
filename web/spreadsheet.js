@@ -694,7 +694,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       last = $(nextEm).closest("td");
       last.addClass("overflowing-into");
       last.addClass("overflowing");
-      w += nextEm.clientWidth + 2;
+      w += nextEm.offsetWidth + 2;
       x += 1;
     }
 
@@ -812,7 +812,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     }
     var my, currentHeight;
     for(my=0, currentHeight=defaultHeight; currentHeight < fullHeight; ++my) {
-      currentHeight += (sizes.y[this.span.y + my] || defaultHeight) + 4;
+      currentHeight += (sizes.y[this.span.y + my] || defaultHeight);
     }
     if(this.span.width != mx || this.span.height != my) {
       this.span.size(mx, my);
@@ -881,7 +881,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
         var text = cell.childNodes[0].childNodes[0].childNodes[0];
         if(x === 0 && y === 0) continue;
-        var newValue = "";
+        var newValue = undefined;
 
         if(x === 0) {
           newValue = this.span.y + y;
@@ -890,14 +890,19 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
           newValue = Waffles.Scripting.columnName(this.span.x+x);
           cell.style.width = cellWidth;
         } else {
-          cell.style.width = cellWidth;
-          cell.style.height = rowHeight;
+          
+          if (cellWidth !== cell.style.width) {
+            cell.style.width = cellWidth;
+            cell.childNodes[0].style.width = cell.style.width;
+          }
+          if (rowHeight !== cell.style.height) {
+            cell.style.height = rowHeight;
+            cell.childNodes[0].style.lineHeight = cell.childNodes[0].style.height = cell.style.height;
+          }
         }
 
-        if(text.nodeValue !== newValue) text.nodeValue = newValue;
-        if(cell.childNodes[0].style.width !== cell.style.width) cell.childNodes[0].style.width = cell.style.width;
-        if(cell.childNodes[0].style.height !== cell.style.height) {
-          cell.childNodes[0].style.lineHeight = cell.childNodes[0].style.height = cell.style.height;
+        if(newValue !== undefined && text.nodeValue !== newValue) {
+          text.nodeValue = newValue;
         }
       }
     }
