@@ -23,7 +23,7 @@
   .spreadsheet .xscroll, .spreadsheet .yscroll {
     z-index: 100; }
   .spreadsheet td.selected div {
-    background: transparent;
+    background: #FFFFFF;
     position: relative;
     z-index: 9; }
   .spreadsheet td.overflowing-from {
