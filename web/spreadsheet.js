@@ -610,7 +610,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
     var w = cell.outerWidth();
     var requires = this._input[0].scrollWidth - 2;
-    var maxX = this.span.x + this.span.width - 1;
+    var maxX = this.span.x + this.span.width - 2;
     var x = 1;
 
     if(requires > this._input.width()) {
@@ -665,8 +665,8 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     }
     if(node.nodeValue !== value) {
       node.nodeValue = value;
-      if(value) this.resizeToFit(node.parentNode, dataCell);
     }
+    if(dataCell) this.resizeToFit(node.parentNode, dataCell);
   };
 
   def.getErrorMessage = function(err) {
