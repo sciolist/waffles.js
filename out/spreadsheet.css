@@ -1,7 +1,6 @@
 .spreadsheet {
+  font-family: verdana;
   overflow: hidden;
-  border-top-color: #BBB;
-  border-bottom-color: #444;
   position: absolute;
   left: 0;
   top: 0;
@@ -14,7 +13,7 @@
     cursor: default; }
   .spreadsheet td, .spreadsheet th {
     font-weight: normal;
-    border: 1px solid #DDDDDD;
+    border: 1px solid #eaeaea;
     white-space: pre-wrap; }
     .spreadsheet td div, .spreadsheet th div {
       white-space: nowrap;
@@ -24,9 +23,9 @@
   .spreadsheet .xscroll, .spreadsheet .yscroll {
     z-index: 100; }
   .spreadsheet td.selected div {
+    background: transparent;
     position: relative;
-    z-index: 9;
-    background: #FFFFFF; }
+    z-index: 9; }
   .spreadsheet td.overflowing-from {
     border-right: 1px solid transparent; }
   .spreadsheet td.overflowing-into {
@@ -45,26 +44,22 @@
   .spreadsheet th.x, .spreadsheet th.xy {
     border-top: none; }
   .spreadsheet th.selected {
-    color: #dadada;
-    background-color: #626262;
-    box-shadow: inset 0 1px 4px #444444;
-    text-shadow: none; }
+    color: #eaeaea;
+    background: #646464;
+    border: 1px solid transparent; }
   .spreadsheet th {
-    font-family: verdana;
-    text-align: center;
-    background: #dadada;
-    border: 1px solid #969696;
-    box-shadow: inset 0 1px 0 #efefef;
-    color: #626262;
-    text-shadow: 0px -1px 0px #888888, 0px 1px 0px white; }
+    color: #646464;
+    background: #eaeaea;
+    border: 1px solid transparent;
+    text-align: center; }
   .spreadsheet .selection {
     z-index: 100;
     position: absolute;
-    left: -1px;
+    left: 0px;
     right: 0px;
-    top: -1px;
+    top: 0px;
     bottom: 0px;
-    border: 2px solid #3c78c8; }
+    border: 2px solid #646464; }
   .spreadsheet .hide-top .selection {
     border-top: none; }
   .spreadsheet .hide-left .selection {
@@ -76,7 +71,7 @@
   .spreadsheet .selection-wrapper {
     display: none;
     pointer-events: none;
-    background: rgba(60, 120, 200, 0.1); }
+    background: rgba(100, 100, 100, 0.05); }
     .spreadsheet .selection-wrapper .drag {
       pointer-events: auto;
       position: absolute;
@@ -85,7 +80,7 @@
       height: 7px;
       right: -2px;
       bottom: -2px;
-      background: #3c78c8;
+      background: #646464;
       cursor: se-resize; }
   .spreadsheet .input-wrapper {
     position: absolute; }
