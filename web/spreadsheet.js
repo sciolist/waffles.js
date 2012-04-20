@@ -98,9 +98,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
     this.span.on("cell.changed", function(e) {
       var span = this;
-      self.queue.push(function() {
-        self.onVisibleCellChanged(self.cellAt(e.cell.x - span.x, e.cell.y - span.y), e.cell);
-      });
+      self.queue.push(function() { refreshInnerValues = true; });
     });
 
     this.createVerticalScroll();
@@ -132,6 +130,8 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       self.updateSelection();
     });
   };
+
+  def.showFormulas = false,
   
   def.createVerticalScroll = function() {
     var self = this;
@@ -633,13 +633,15 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
 
   def.assignValue = function(node, dataCell) {
     if(node.length) { node = node[0]; }
-    if(node.nodeName[0]!=="T") { node = node.childNodes[0].childNodes[0].childNodes[0]; }
+    if(node.nodeName[0]==="T") { node = node.childNodes[0].childNodes[0].childNodes[0]; }
     var td = node.parentNode.parentNode.parentNode;
-    if(td.className.indexOf("error")>-1) td.className="";
+    if(td.className !== "") td.className = "";
 
     var value;
     try {
-      value = dataCell ? dataCell.valueOf() : "";
+      if(dataCell) {
+        value = this.showFormulas ? dataCell.formula() : dataCell.valueOf();
+      }
       if(value === undefined) { value = ""; }
     } catch(e) {
       td.className += " error";
@@ -647,18 +649,13 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     }
     if(node.nodeValue !== value) {
       node.nodeValue = value;
+      if(value) this.resizeToFit(node.parentNode, dataCell);
     }
-
-    if(dataCell) this.resizeToFit(node.parentNode, dataCell);
   };
 
   def.getErrorMessage = function(err) {
     if(err.message) return err.message;
     return "#ERR";
-  };
-
-  def.onVisibleCellChanged = function(node, dataCell) {
-    this.refreshInnerValues();
   };
 
   // Fills up empty neighbours if a cell is overflowing.
