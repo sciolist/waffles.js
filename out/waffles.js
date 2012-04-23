@@ -127,6 +127,8 @@ requireCode["./cell"] = function(exports) {
       if(arguments.length < 3) {
         emit = true;
       }
+      if(formula === "" || formula === null) formula = undefined;
+      if(formula === this._data.formula) return;
   
       this.valid = value !== undefined;
       this._data.formula = formula;
@@ -137,7 +139,7 @@ requireCode["./cell"] = function(exports) {
       }
       delete this._error;
       if(emit) { this.emit("changed"); }
-      if(this._data.formula === undefined || this._data.formula === "" || this._data.formula === null) {
+      if(this._data.formula === undefined) {
         this.owner.deleteCell(this.x, this.y);
       }
     };
