@@ -469,10 +469,15 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     
     input.keydown(function(e) {
       var isVisible = !inputWrapper.hasClass("hidden");
+      var handled = true;
 
       if(isVisible) {
         // Runs in edit mode.
         switch(e.which) {
+          case 9:  // Tab
+            self.hideEditInput();
+            self.moveSelection(false, e.shiftKey ? -1 : 1, 0);
+            break;
           case 37: // L
             if(e.ctrlKey || (em.selectionStart === 0 && em.selectionEnd === 0)) {
               self.hideEditInput();
@@ -493,12 +498,16 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
             self.hideEditInput();
             self.moveSelection(e.shiftKey, 0, 1);
             break;
-          case 13:
+          case 13: // Enter
             self.hideEditInput();
             self.moveSelection(false, 0, e.shiftKey ? -1 : 1);
             break;
-        }
-        return;
+          default:
+            handled = false;
+            break;
+          }
+          if(handled) e.preventDefault();
+          return;
       }
 
       // Runs OUTSIDE edit mode.
@@ -509,6 +518,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
         case 18: 
         case 224:
           break;
+
         case 13: // enter
           if(e.ctrlKey) {
             self.showEditInput();
@@ -523,6 +533,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
         case 38: // U
           self.moveSelection(e.shiftKey, 0, -1);
           break;
+        case 9:
         case 39: // R
           self.moveSelection(e.shiftKey, 1, 0);
           break;
@@ -545,9 +556,12 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
           break;
 
         default:
+          handled = false;
           self.showEditInput();
           break;
       }
+
+      if(handled) e.preventDefault();
     });
   };
 
@@ -651,8 +665,8 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     if(node.length) { node = node[0]; }
     if(node.nodeName[0]==="T") { node = node.childNodes[0].childNodes[0].childNodes[0]; }
     var td = node.parentNode.parentNode.parentNode;
-    if(td.className !== "") td.className = "";
 
+    var className = "";
     var value;
     try {
       if(dataCell) {
@@ -660,13 +674,14 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       }
       if(value === undefined) { value = ""; }
     } catch(e) {
-      td.className += " error";
+      className = "error";
       value = this.getErrorMessage(e);
     }
-    if(node.nodeValue !== value) {
-      node.nodeValue = value;
-    }
-    if(dataCell) this.resizeToFit(node.parentNode, dataCell);
+
+    var changed = node.nodeValue !== value;
+    if(changed) node.nodeValue = value;
+    if(td.className !== className) td.className = className;
+    if(dataCell) this.resizeToFit(node.parentNode, td, dataCell);
   };
 
   def.getErrorMessage = function(err) {
@@ -675,32 +690,31 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
   };
 
   // Fills up empty neighbours if a cell is overflowing.
-  def.resizeToFit = function(node, dataCell, log) {
-    var self = this;
-    var reset = [];
-
-    var w = $(node).parent().width(), x = 1;
-    $(node).width(w);
+  def.resizeToFit = function(node, td, dataCell) {
+    var w = node.parentNode.offsetWidth, x = 1;
+    if(w < node.offsetWidth) {
+      node.style.width = w + "px";
+    }
     var requires = node.scrollWidth - 4;
-    var last = $(node).closest("td");
+    var last = td;
 
     var needsResizing = w < requires;
     while(w < requires) {
-      var nextEm = this.cellAt(dataCell.x + x - this.span.x, dataCell.y - this.span.y)[0];
+      var nextEm = last.nextSibling;
       if(!nextEm) { break; }
       var text = nextEm.childNodes[0].childNodes[0].childNodes[0];
-      if(text && /[^\s]/.test(text.nodeValue)) break;
-      if(last) last.addClass("overflowing-from");
-      last = $(nextEm).closest("td");
-      last.addClass("overflowing-into");
-      last.addClass("overflowing");
-      w += nextEm.offsetWidth + 2;
+      if(text && text.nodeValue.length) break;
+      if(last) last.className += " overflowing-from";
+      last = nextEm;
+      last.className += " overflowing overflowing-into";
+      w += nextEm.childNodes[0].offsetWidth + 4;
       x += 1;
     }
 
     if(!needsResizing) return;
     if(x > 1) {
-      $(node).width(w).closest("td").addClass("overflowing overflowing-from");
+      node.style.width = w + "px";
+      td.className += " overflowing overflowing-from";
     }
   };
 
@@ -782,7 +796,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
     for(var i=0; i<cells.length; ++i) {
       cellMap[(cells[i].y) + "_" + (cells[i].x)] = cells[i];
     }
-    
     var table = this.table[0];
     for(var y=table.rows.length-1; y>=1; --y) {
       var row = table.rows[y];
@@ -792,6 +805,7 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
         this.assignValue(cell, dataCell);
       }
     }
+    this.updateSelection();
   };
 
   def.refreshValues = function refreshValues() {
@@ -907,7 +921,6 @@ var Spreadsheet = Waffles.util.Class(function Spreadsheet(def) {
       }
     }
     this.refreshInnerValues();
-    this.updateSelection();
   }
 });
 

@@ -1,6 +1,7 @@
 .spreadsheet {
-  $selected: #646464;
+  $selected: #5F6273;
   $background: #eaeaea;
+
   font-family: verdana;
   overflow: hidden;
   position: absolute;
@@ -37,12 +38,11 @@
   }
   td.overflowing-from { border-right: 1px solid transparent; }
   td.overflowing-into { border-left: 1px solid transparent; }
-  td.overflowing-from > div, td.overflowing-into > div {
+  td.overflowing-from > div > div, td.overflowing-into > div > div {
     position: relative;
     z-index: 10;
-    overflow: inherit;
   }
-  td div div {
+  tr td > div > div {
     overflow: hidden;
   }
   td.error div {

@@ -30,11 +30,10 @@
     border-right: 1px solid transparent; }
   .spreadsheet td.overflowing-into {
     border-left: 1px solid transparent; }
-  .spreadsheet td.overflowing-from > div, .spreadsheet td.overflowing-into > div {
+  .spreadsheet td.overflowing-from > div > div, .spreadsheet td.overflowing-into > div > div {
     position: relative;
-    z-index: 10;
-    overflow: inherit; }
-  .spreadsheet td div div {
+    z-index: 10; }
+  .spreadsheet tr td > div > div {
     overflow: hidden; }
   .spreadsheet td.error div {
     color: #880000;
@@ -45,10 +44,10 @@
     border-top: none; }
   .spreadsheet th.selected {
     color: #eaeaea;
-    background: #646464;
+    background: #5f6273;
     border: 1px solid transparent; }
   .spreadsheet th {
-    color: #646464;
+    color: #5f6273;
     background: #eaeaea;
     border: 1px solid transparent;
     text-align: center; }
@@ -59,7 +58,7 @@
     right: 0px;
     top: 0px;
     bottom: 0px;
-    border: 2px solid #646464; }
+    border: 2px solid #5f6273; }
   .spreadsheet .hide-top .selection {
     border-top: none; }
   .spreadsheet .hide-left .selection {
@@ -71,7 +70,7 @@
   .spreadsheet .selection-wrapper {
     display: none;
     pointer-events: none;
-    background: rgba(100, 100, 100, 0.05); }
+    background: rgba(95, 98, 115, 0.05); }
     .spreadsheet .selection-wrapper .drag {
       pointer-events: auto;
       position: absolute;
@@ -80,7 +79,7 @@
       height: 7px;
       right: -2px;
       bottom: -2px;
-      background: #646464;
+      background: #5f6273;
       cursor: se-resize; }
   .spreadsheet .input-wrapper {
     position: absolute; }
